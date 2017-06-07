@@ -4,47 +4,15 @@ use LWP::Simple;
 use JSON::Parse 'parse_json';
 use LWP::UserAgent;
 
-sub download{
-	my $url = shift;
-	my $bytes = shift;
+require "util.pl";
 
-	my $ua = LWP::UserAgent->new;
+my $url = 'https://www.amazon.com/dp/B0018OR118';
+my $filename = 'data/root.html';
+my $document = undef;
 
-	if(defined $bytes){
-		$ua->max_size($bytes);
-	}
-
-	my $resp = $ua->get($url,
-	    Range => "bytes=0-$bytes"
-	);
-
-	return $resp->content;
+if(defined $url && defined $filename){
+	$document = download(url=>$url,filename=>$filename,mtime_threshold=>100000);
 }
-
-sub writeFile{
-	my $content = shift;
-	my $filename = shift;
-
-	open (MYFILE, ">$filename");
-	print MYFILE $content;
-	close (MYFILE); 
-}
-
-
-
-#my $url = 'https://www.amazon.com/dp/B0018OR118';
-my $file = 'data/root.html';
-if(defined $url && defined $file){
-	getstore($url, $file);
-}
-
-
-my $document = do {
-    local $/ = undef;
-    open my $fh, "<", $file
-        or die "could not open $file: $!";
-    <$fh>;
-};
 
 my $markStart = 'var dataToReturn =';
 my $index1 = index($document, $markStart);
@@ -73,12 +41,59 @@ my $data = $json->{"dimensionValuesDisplayData"};
 
 for (keys %{$data}){
 	my $asin = $_;
+	$asin = 'B0018ON6XA';
 	my $dir = "data/$asin";
+	my $filename = "$dir/page.html";
+
 	mkdir $dir;
 
 	my $suburl = "https://www.amazon.com/dp/$asin";
-	my $content = download($suburl,10000);
-	writeFile($content, "$dir/page.html");
+	my $content = download(url=>$suburl,
+		filename=>$filename,
+		mtime_threshold=>100000,
+		bytes=>600000);
+	
+	my $title = getNodeText($content,nodename=>"span",nodeid=>"productTitle");
+	my $list_price = getNodeText($content,nodename=>"span",leading_str=>"List Price:",nodeclass=>"a-text-strike");
+	my $price = getNodeText($content,nodename=>"span",nodeid=>"priceblock_ourprice");
+	my $size = ${$data}{size};
 }
 
-print "ok $data";
+sub getNodeText{
+	my $content = shift;
+	my %args = @_;
+	my $nodename = $args{nodename} || die "nodename is required";
+	my $nodeid = $args{nodeid};
+	my $nodeclass = $args{nodeclass};
+	my $leading_str = $args{leading_str};
+
+	my $idxStart = 0;
+	if(defined $leading_str){
+		$idxStart = index($content,"$leading_str");
+		throw Exception("leading_str $leading_str not found") if $idxStart < 0;
+	}
+
+	if(defined $nodeid){
+		$idxStart = index($content,"<$nodename id=\"$nodeid\"",$idxStart);
+		throw Exception("node $nodename with id $nodeid not found") if $idxStart < 0;
+	}else{
+		if(defined $nodeclass){
+			$idxStart = index($content,"<$nodename class=\"$nodeclass\"",$idxStart) || die "";
+			throw Exception("node $nodename with class $nodeclass not found") if $idxStart < 0;
+		}
+	}
+
+	$idxStart = index($content,">", $idxStart);
+	throw Exception("closing of node $nodename with id $nodeid not found") if $idxStart < 0;
+	$idxStart = $idxStart + 1;
+
+	my $idxEnd = index($content,"</$nodename>", $idxStart);
+	throw Exception("end mark of node $nodename with id $nodeid not found") if $idxEnd < 0;
+	$idxEnd = $idxEnd - 1;
+
+	my $res = substr($content, $idxStart, $idxEnd - $idxStart + 1);
+	return $res;
+
+}
+
+
