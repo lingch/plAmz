@@ -56,7 +56,7 @@ sub genDataPack{
 		next unless defined $jo_size->{imgs_local};
 		for (my $i = 0; $i < scalar(@{$jo_size->{imgs_local}}); $i++) {
 			my $hash = md5_hex($jo_size->{imgs_remote}->[$i]);
-		    link $jo_size->{imgs_local}->[$i],"$key/$hash.tbi";
+		    link $jo_size->{imgs_local}->[$i],"$prefix/$key/$hash.tbi";
 		    $jo_size->{imgs_local}->[$i] = "$hash";
 		}
 	}
