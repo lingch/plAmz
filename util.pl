@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 
 use LWP::UserAgent;
+use Digest::MD5 qw(md5_hex);
 
 sub fileMTimeDelta{
 	my $filename = shift;
@@ -17,10 +18,14 @@ sub download{
 	my $url = $args{url} || die "parameter url is required";
 	my $filename = $args{filename} || die "parameter filename is required";
 	my $bytes = $args{bytes};
-	my $mtime_threshold = $args{mtime_threshold};
 
-	if(defined $mtime_threshold && fileMTimeDelta($filename) < $mtime_threshold){
-		return readFile($filename);
+	my $cache_dir = $args{cache_dir};
+	my $cache_sec = $args{cache_sec};
+	my $url_hash = md5_hex($url);
+	my $cache_filename = "$cache_dir/$url_hash";
+
+	if(defined $cache_dir and defined $cache_sec and fileMTimeDelta($cache_filename) < $cache_sec){
+		return readFile($cache_filename);
 	}
 
 	my $ua = LWP::UserAgent->new(ssl_opts=>{verify_hostname=>0});
@@ -44,6 +49,10 @@ sub download{
 	my $resp = $ua->get($url);
 
 	writeFile($resp->content,$filename);
+
+	if(defined $cache_dir){
+		link $filename, $cache_filename;
+	}
 
 	return $resp->content;
 }

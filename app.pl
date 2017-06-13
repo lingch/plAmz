@@ -12,13 +12,15 @@ use Text::Template;
 use File::Path qw(make_path remove_tree);
 
 require "util.pl";
+require "html_parser.pl";
 
 my $url = 'https://www.amazon.com/dp/B0018OR118';
 my $filename = 'root.html';
 my $document = undef;
 
 if(defined $url && defined $filename){
-	$document = download(url=>$url,filename=>$filename,mtime_threshold=>100000,bytes=>1000000);
+	print "downloading root.html\n";
+	$document = download(url=>$url,filename=>$filename,cache_dir=>".",cache_sec=>100000,bytes=>1000000);
 }
 
 my $jsonstr = getJsonText($document,'var dataToReturn =','return dataToReturn;');
@@ -30,105 +32,51 @@ my $jo_img = parse_json ($jsonstr);
 
 our $jo_root = restructure($jo_asin);
 
-for my $color ( sort keys %{$jo_root}){
+my $n=0;
+for my $key ( sort keys %{$jo_root}){
 	
-	$jo_root->{$color} = handle_color($jo_root->{$color},$color);
+	$jo_root->{$key} = handle_color($jo_root->{$key});
 
-	last;
+	genDataPack("template.csv",$key);
+
+	$n++;
+
+	last if $n == 2;
 }
 
-genDataPack("template.csv","Black");
-
-
-sub getJsonText{
-	my $document =shift;
-	my $markStart = shift;
-	my $markEnd = shift;
-
-	my $idxStart = index($document, $markStart);
-	throw Exception("start mark $markStart not found") if $idxStart < 0;
-	$idxStart = $idxStart + length($markStart);
-
-	my $idxEnd = index($document, $markEnd,$idxStart);
-	throw Exception("end mark $markEnd not found") if $idxEnd < 0;
-
-	$idxEnd = rindex($document, ';',$idxEnd);
-	throw Exception("; before end mark $markStart not found") if $idxEnd < 0;
-
-	$jsonstr = substr($document,$idxStart,$idxEnd-$idxStart);
-
-	$jsonstr =~ s/(,\s*])/]/g;
-	$jsonstr =~ s/(,\s*})/}/g;
-
-	return $jsonstr;
-
-}
 
 sub genDataPack{
-	my ($temp_filename, $color) = @_;
+	our ($temp_filename, $key) = @_;
 
-	make_path( "$color");
-	our $jo_color = $jo_root->{$color};
-	# $jo_color->{hello} = "world";
-	for my $jo_size (values %{$jo_color}){
+	make_path( "$key");
+	our $jo_color_w = $jo_root->{$key};
+	# $jo_color_w->{hello} = "world";
+	for my $jo_size (values %{$jo_color_w}){
 		# $jo_size->{nihao} = "shijie";
 		next unless defined $jo_size->{imgs_local};
 		for (my $i = 0; $i < scalar(@{$jo_size->{imgs_local}}); $i++) {
 			my $hash = md5_hex($jo_size->{imgs_remote}->[$i]);
-		    link $jo_size->{imgs_local}->[$i],"$color/$hash.tbi";
+		    link $jo_size->{imgs_local}->[$i],"$key/$hash.tbi";
 		    $jo_size->{imgs_local}->[$i] = "$hash";
 		}
 	}
-	our $jo_size = $jo_color->{"30W x 29L"};
+
+	our $jo_size_1 = (values %{$jo_color_w})[0];
 
 	my $template = Text::Template->new(SOURCE => $temp_filename)
 	or die "Couldn't construct template: $Text::Template::ERROR";
 
 	my $result = $template->fill_in() or die $Text::Template::ERROR;
 
-	writeFile($result,"$color.csv");
-}
-
-sub getPrice{
-	my $content = shift;
-
-	my $price = getNodeText($content,nodename=>"span",nodeid=>"priceblock_dealprice");
-	$price = getNodeText($content,nodename=>"span",nodeid=>"priceblock_ourprice") if ! defined $price;
-	$price = getNodeText($content,nodename=>"span",nodeid=>"priceblock_saleprice") if ! defined $price;
-	throw Error::Simple("price not found") if ! defined $price;
-	$price = trim($price);
-	$price =~ s/^\$//g;
-
-	return $price;
-}
-
-sub getTitle{
-	my $content = shift;
-
-	my $title = getNodeText($content,nodename=>"span",nodeid=>"productTitle");
-	throw Error::Simple("title not found") if ! defined $title;
-	$title = trim($title);
-
-	return $title;
-}
-
-sub getListPrice{
-	my $content = shift;
-
-	my $list_price = getNodeText($content,nodename=>"span",leading_str=>"List Price:",nodeclass=>"a-text-strike");
-	$list_price = getNodeText($content,nodename=>"span",leading_str=>"Was:",nodeclass=>"a-text-strike") if ! defined($list_price);
-
-	$list_price = trim($list_price);
-
-	return $list_price;
+	writeFile($result,"$key.csv");
 }
 
 sub handle_size{
 	my $jo = shift;
-
-	my $color = shift;
 	my $size =  shift;
+
 	my $asin = $jo->{asin};
+	my $color = $jo->{color};
 
 	my $size_p =  $size;
 	my $color_p = $color;
@@ -150,7 +98,8 @@ sub handle_size{
 	my $suburl = "https://www.amazon.com/dp/$asin?psc=1";
 	my $content = download(url=>$suburl,
 		filename=>$filename,
-		mtime_threshold=>1000000,
+		cache_dir=>"$base_local",
+		cache_sec=>1000000,
 		bytes=>1000000);
 	
 	
@@ -181,7 +130,7 @@ sub handle_size{
 			my $fullpath = "$base_local/$path/$filename_local";
 			print "\tretrieving $filename_local\r\n";
 			
-			download(url=>$imgL,filename=>$fullpath,mtime_threshold=>100000);
+			download(url=>$imgL,filename=>$fullpath,cache_dir=>$base_local,cache_sec=>100000);
 
 			link $fullpath,$imgNameHashFilename;
 		}
@@ -213,16 +162,20 @@ sub restructure{
 			next;	#skip unusual size
 		}
 
+		my ($w,$l) = $size =~ m/(\d+W) x (\d+L)/;
+		next unless defined $w and defined $l;
 
-		if (! defined $jo->{$color}) {
-			$jo->{$color} = {};
+		my $color_w = "$color - $w";
+		if (! defined $jo->{$color_w}) {
+			$jo->{$color_w} = {};
 		}
 
-		if (! defined $jo->{$color}->{$size}) {
-			$jo->{$color}->{$size} = {};
+		if (! defined $jo->{$color_w}->{$size}) {
+			$jo->{$color_w}->{$size} = {};
 		}
 
-		$jo->{$color}->{$size}->{asin}=$asin;
+		$jo->{$color_w}->{$size}->{asin}=$asin;
+		$jo->{$color_w}->{$size}->{color}=$color;
 	}
 
 	return $jo;
@@ -231,11 +184,11 @@ sub restructure{
 
 sub handle_color{
 	my $jo_color = shift;
-	my $color = shift;
+
 	my $c = 0;
 	for my $size (sort keys %{$jo_color}){
 		try {
-			$jo_color->{$size} = handle_size($jo_color->{$size},$color,$size);
+			$jo_color->{$size} = handle_size($jo_color->{$size},$size);
 			$c += 1;
 		}
 		catch Error with {
