@@ -150,7 +150,7 @@ sub handle_size{
 	my $suburl = "https://www.amazon.com/dp/$asin?psc=1";
 	my $content = download(url=>$suburl,
 		filename=>$filename,
-		mtime_threshold=>100000,
+		mtime_threshold=>1000000,
 		bytes=>1000000);
 	
 	
@@ -243,7 +243,7 @@ sub handle_color{
 			print "failed: " . $ex->text . " \r\n";
 		};
 
-		last if $c == 5;
+		#last if $c == 5;
 	}
 
 	return $jo_color;
