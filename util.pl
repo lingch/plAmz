@@ -3,6 +3,12 @@
 use LWP::UserAgent;
 use Digest::MD5 qw(md5_hex);
 
+sub  normalizePath {
+	my $path = shift;
+	$path =~ s/\s+/-/g;
+	return $path;
+}
+
 sub fileMTimeDelta{
 	my $filename = shift;
 	my $mtime = (stat $filename)[9];

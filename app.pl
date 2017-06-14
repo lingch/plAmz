@@ -41,14 +41,17 @@ for my $key ( sort keys %{$jo_root}){
 
 	$n++;
 
-	last if $n == 2;
+	# last if $n == 2;
 }
 
 
 sub genDataPack{
 	our ($temp_filename, $key) = @_;
 
-	make_path( "$key");
+	my $prefix = "taobao-data";
+	my $nor_key = normalizePath($key);
+	make_path( "$prefix/$nor_key");
+
 	our $jo_color_w = $jo_root->{$key};
 	# $jo_color_w->{hello} = "world";
 	for my $jo_size (values %{$jo_color_w}){
@@ -56,7 +59,7 @@ sub genDataPack{
 		next unless defined $jo_size->{imgs_local};
 		for (my $i = 0; $i < scalar(@{$jo_size->{imgs_local}}); $i++) {
 			my $hash = md5_hex($jo_size->{imgs_remote}->[$i]);
-		    link $jo_size->{imgs_local}->[$i],"$prefix/$key/$hash.tbi";
+		    link $jo_size->{imgs_local}->[$i],"$prefix/$nor_key/$hash.tbi";
 		    $jo_size->{imgs_local}->[$i] = "$hash";
 		}
 	}
@@ -68,7 +71,7 @@ sub genDataPack{
 
 	my $result = $template->fill_in() or die $Text::Template::ERROR;
 
-	writeFile($result,"$key.csv");
+	writeFile($result,"$prefix/$nor_key.csv");
 }
 
 sub handle_size{
@@ -78,10 +81,9 @@ sub handle_size{
 	my $asin = $jo->{asin};
 	my $color = $jo->{color};
 
-	my $size_p =  $size;
-	my $color_p = $color;
-	$color_p =~ s/\s+/-/g;
-	$size_p =~ s/\s+/-/g;
+	my $size_p =  normalizePath($size);
+	my $color_p = normalizePath($color);
+
 	my $base_local = "/var/www/storage";
 	my $base_url = "http://14.155.17.64:81";
 	my $path = "$color_p/$size_p";
