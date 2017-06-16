@@ -20,7 +20,7 @@ my $document = undef;
 
 if(defined $url && defined $filename){
 	print "downloading root.html\n";
-	$document = download(url=>$url,filename=>$filename,cache_dir=>".",cache_sec=>100000,bytes=>1000000);
+	$document = download(url=>$url,filename=>$filename,cache_dir=>".",cache_sec=>1000000,bytes=>1000000);
 }
 
 my $jsonstr = getJsonText($document,'var dataToReturn =','return dataToReturn;');
@@ -33,54 +33,57 @@ my $jo_img = parse_json ($jsonstr);
 our $jo_root = restructure($jo_asin);
 
 my $n=0;
-for my $key ( sort keys %{$jo_root}){
+for my $color ( sort keys %{$jo_root}){
 	
-	$jo_root->{$key} = handle_color($jo_root->{$key});
+	$jo_root->{$color} = handle_color($jo_root->{$color},$color);
 
-	genDataPack("template.csv",$key);
+	genDataPack("template.csv",$jo_root->{$color}, $color);
 
 	$n++;
 
-	# last if $n == 2;
+	last if $n == 17;
 }
 
 sub genDataPack{
-	our ($temp_filename, $key) = @_;
-
+	our ($temp_filename, $jo, $color) = @_;
 	my $prefix = "taobao-data";
-	my $nor_key = normalizePath($key);
-	make_path( "$prefix/$nor_key");
+	my $color_p = normalizePath($color);
 
-	our $jo_color_w = $jo_root->{$key};
 	# $jo_color_w->{hello} = "world";
-	for my $jo_size (values %{$jo_color_w}){
-		# $jo_size->{nihao} = "shijie";
-		next unless defined $jo_size->{imgs_local};
-		for (my $i = 0; $i < scalar(@{$jo_size->{imgs_local}}); $i++) {
-			my $hash = md5_hex($jo_size->{imgs_remote}->[$i]);
-		    link $jo_size->{imgs_local}->[$i],"$prefix/$nor_key/$hash.tbi";
-		    $jo_size->{imgs_local}->[$i] = "$hash";
+	for our $size_range (keys %{$jo}){
+		our $jo_size_range = $jo->{$size_range};
+		our $jo_size_1 = $jo_size_range->[0];
+
+		make_path( "$prefix/$color_p/$size_range");
+
+		for my $jo_size (@{$jo_size_range}){
+			# $jo_size->{nihao} = "shijie";
+			next unless defined $jo_size->{imgs_local};
+			for (my $i = 0; $i < scalar(@{$jo_size->{imgs_local}}); $i++) {
+				my $hash = md5_hex($jo_size->{imgs_remote}->[$i]);
+			    link $jo_size->{imgs_local}->[$i],"$prefix/$color_p/$size_range/$hash.tbi";
+			    $jo_size->{imgs_local}->[$i] = "$hash";
+			}
 		}
+
+		my $template = Text::Template->new(SOURCE => $temp_filename)
+		or die "Couldn't construct template: $Text::Template::ERROR";
+
+		my $result = $template->fill_in() or die $Text::Template::ERROR;
+
+		writeFile($result,"$prefix/$color_p/$size_range.csv");
 	}
+	
 
-	our $jo_size_1 = (values %{$jo_color_w})[0];
-
-	my $template = Text::Template->new(SOURCE => $temp_filename)
-	or die "Couldn't construct template: $Text::Template::ERROR";
-
-	my $result = $template->fill_in() or die $Text::Template::ERROR;
-
-	writeFile($result,"$prefix/$nor_key.csv");
 }
 
 sub handle_size{
 	my $jo = shift;
-	my $size =  shift;
 
 	my $asin = $jo->{asin};
 	my $color = $jo->{color};
 
-	my $size_p =  normalizePath($size);
+	my $size_p =  normalizePath($jo->{size});
 	my $color_p = normalizePath($color);
 
 	my $base_local = "/var/www/storage";
@@ -91,7 +94,7 @@ sub handle_size{
 	$jo->{color_p} = $color_p;
 	$jo->{size_p} = $size_p;
 
-	print "retrieving $asin: $color, $size\r\n";
+	print "retrieving $asin: $color, $jo->{size}\r\n";
 	#$asin = 'B0151Z1DIG';
 
 	my $filename = "$base_local/$path/page.html";
@@ -150,6 +153,54 @@ sub handle_size{
 	return $jo;
 }
 
+sub get_w{
+	my $jo = shift;
+	my $key = shift;
+
+	my $ret = {};
+	$ret->{p} = $jo->{$key};
+	delete $jo->{$key};
+	$ret->{suffix} = "$w";
+
+	return ($jo,$ret);
+}
+
+sub merge_w{
+	my $jo = shift;
+
+	my $p = undef;
+	my $key1 = "";
+	my $key2 = "";
+	for my $w (sort keys $jo){
+		if (! defined $p){
+			$p = $w;
+			$key1 = $key2 = $w;
+			next;
+		}
+
+		if(scalar(@{$jo->{$p}}) + scalar(@{$jo->{$w}}) <= 24){
+			#merge
+			$jo->{$p} = [ @{$jo->{$p}},@{$jo->{$w}}];
+			delete $jo->{$w};
+			#remember last key
+			$key2 = "$w";
+			next;
+		}else{
+			#change the key
+			$jo->{"$key1-$key2"} = $jo->{$p};
+			delete $jo->{$p};
+			#set new $p
+			$p = $w;
+			$key1 = $key2 = $w;
+		}	
+	}
+
+	#change the key
+	$jo->{"$key1-$key2"} = $jo->{$p};
+	delete $jo->{$p};
+
+	return $jo;
+}
 
 sub restructure{
 	my $jo_asin = shift;
@@ -166,41 +217,50 @@ sub restructure{
 		my ($w,$l) = $size =~ m/(\d+W) x (\d+L)/;
 		next unless defined $w and defined $l;
 
-		my $color_w = "$color - $w";
-		if (! defined $jo->{$color_w}) {
-			$jo->{$color_w} = {};
-		}
+		$jo->{$color} = {} if ! defined $jo->{$color};
+		$jo->{$color}->{$w} = [] if ! defined $jo->{$color}->{$w};
 
-		if (! defined $jo->{$color_w}->{$size}) {
-			$jo->{$color_w}->{$size} = {};
-		}
+		my $item = {};
+		$item->{asin}=$asin;
+		$item->{color}=$color;
+		$item->{size}=$size;
 
-		$jo->{$color_w}->{$size}->{asin}=$asin;
-		$jo->{$color_w}->{$size}->{color}=$color;
+		push $jo->{$color}->{$w}, $item;
+	}
+
+	for my $color (keys $jo){
+		$jo->{$color} = merge_w($jo->{$color});
 	}
 
 	return $jo;
 }
 
+sub handle_size_range {
+	my $jo = shift;
+	my $size_range = shift;
 
-sub handle_color{
-	my $jo_color = shift;
-
-	my $c = 0;
-	for my $size (sort keys %{$jo_color}){
+	for (my $i = 0; $i<scalar(@{$jo}); $i++){
 		try {
-			$jo_color->{$size} = handle_size($jo_color->{$size},$size);
-			$c += 1;
+			$jo->[$i] = handle_size($jo->[$i]);
+			
 		}
 		catch Error with {
 			my $ex = shift;
 			print "failed: " . $ex->text . " \r\n";
 		};
-
-		#last if $c == 5;
 	}
 
-	return $jo_color;
+	return $jo;
+}
+sub handle_color{
+	my $jo = shift;
+	my $color = shift;
+
+	for my $size_range (sort keys $jo){
+		$jo->{$size_range} = handle_size_range($jo->{$size_range}, $size_range);
+	}
+
+	return $jo;
 }
 
 sub getNodeTextEx{

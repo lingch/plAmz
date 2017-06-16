@@ -5,7 +5,7 @@ use Digest::MD5 qw(md5_hex);
 
 sub  normalizePath {
 	my $path = shift;
-	$path =~ s/\s+/-/g;
+	$path =~ s/[\s\/]+/-/g;
 	return $path;
 }
 
