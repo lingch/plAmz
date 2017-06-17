@@ -1,29 +1,56 @@
-﻿{$OUT .= "$jo_size_1->{title} ($color $size_range)"}	50010167	""	1	"美国"	"美国"	1	{$jo_size_1->{price_cny}}	""	1	7	2	1.21064e+19	1.82202e-37	0	0	0	2	1	""	"{$jo_size_1->{title}}"	"20000:3271216;42722636:3250994;122216515:29535;122276111:20525;1627207:-1001;20518:-1001;20518:-1002;20518:-1003"	9720543520	0	"{$jo_size_1->{datetime}}"	"200"	"{
+﻿{$OUT .= "$jo_size_1->{title} ($jo_size_1->{color} $size_range)"}	50010167	""	1	"美国"	"美国"	1	{$jo_size_1->{price_cny}}	"0.00"	{
+	my $n = 0;
+	for my $jo_size (@{$jo_size_range}){
+		$n += $jo_size->{count};
+	}
+	$OUT .= "$n";
+}	7	2	1.21064e+19	1.82202e-37	0	0	0	2	1	""	"{$jo_size_1->{title}}"	"20000:3271216;42722636:3250994;122216515:29535;122276111:20525;{
+#宝贝属性
+	$OUT .= "1627207:-1001;";
+	$i = 0;
+	for my $jo_size (@{$jo_size_range}){
+		$n = -1001-$i;
+		$OUT .= "20518:$n;";
+		$i++;
+	}
+}"	9720543520	0	"{$jo_size_1->{datetime}}"	"200"	"{
+##图片状态
 	for (my $i=0; $i< scalar(@{$jo_size_1->{imgs_local}}); $i++){
 		$OUT .= "2;";
 	}
 }"	0	"{
+#新图片
 	$i=0;
 	for (@{$jo_size_1->{imgs_local}}){
 		$OUT .= "$_:1:$i:|;";
 		$i += 1;
 	}
 }"	""	"{
+#销售属性组合
 	$i = 0;
 	for my $jo_size (@{$jo_size_range}){
-		my $n = -1001-$i;
-		$OUT .= "$jo_size->{price_cny}:5:$jo_size->{asin}:1627207:-1001;20518:$n;";
+		$n = -1001-$i;
+		$OUT .= "$jo_size->{price_cny}:$jo_size->{count}:$jo_size->{asin}:1627207:-1001;20518:$n;";
 		$i++;
 	}
 	
-}"	""	""	""	""	0	0	-1	1	lingch1	1	0	0	""	tags:4674,32706,36610,3203,2691	1	2	美国	1			0		""		{
+}"	""	"{
+	#用户输入名-值对
+	#$OUT .= "$jo_size_1->{color};";
+	#for my $jo_size (@{$jo_size_range}){
+	#	$OUT .= "$jo_size->{size};";
+	#}
+}"	""	""	0	0	-1	2	lingch1	1	0	0	""	tags:4674,32706,36610,3203,2691	1	2	美国	1			0		""		{
+#
 	for (my $i =0 ; $i < scalar(@{$jo_size_range}); $i++){
 		$OUT .= ";";
 	}
-}	0	""	""	"1627207:-1001:{$jo_size_1->{color}};{
+}	0	""	""	"{
+#自定义属性值
+$OUT .= "1627207:-1001:$jo_size_1->{color};";
 	$i = 0;
 	for my $jo_size (@{$jo_size_range}){
-		my $n = -1001-$i;
+		$n = -1001-$i;
 		$OUT .= "20518:$n:$jo_size->{size};";
 		$i++;
 	}

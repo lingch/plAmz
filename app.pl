@@ -165,6 +165,13 @@ sub get_w{
 	return ($jo,$ret);
 }
 
+sub arr_count{
+	my $a1 = shift;
+	my $a2 = shift;
+
+	return scalar(@{$a1}) + scalar(@{$a2});
+}
+
 sub merge_w{
 	my $jo = shift;
 
@@ -178,7 +185,7 @@ sub merge_w{
 			next;
 		}
 
-		if(scalar(@{$jo->{$p}}) + scalar(@{$jo->{$w}}) <= 24){
+		if(arr_count($jo->{$p},$jo->{$w}) <= 24){
 			#merge
 			$jo->{$p} = [ @{$jo->{$p}},@{$jo->{$w}}];
 			delete $jo->{$w};
@@ -224,6 +231,7 @@ sub restructure{
 		$item->{asin}=$asin;
 		$item->{color}=$color;
 		$item->{size}=$size;
+		$item->{count}=1;
 
 		push $jo->{$color}->{$w}, $item;
 	}
