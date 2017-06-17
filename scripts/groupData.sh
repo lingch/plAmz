@@ -1,5 +1,7 @@
 #!/bin/sh
 
+rm -r data
+rm data.csv -f
 mkdir data
 find taobao-data/ -name "*.tbi" | xargs -I '{}' ln '{}' "data/"
 cat template-header.csv > data.csv
