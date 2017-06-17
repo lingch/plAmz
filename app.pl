@@ -8,6 +8,7 @@ use Error qw(:try);
 use Data::GUID;
 use Digest::MD5 qw(md5_hex);
 use Text::Template;
+use POSIX;
 
 use File::Path qw(make_path remove_tree);
 
@@ -36,6 +37,8 @@ my $n=0;
 for my $color ( sort keys %{$jo_root}){
 	
 	$jo_root->{$color} = handle_color($jo_root->{$color},$color);
+
+	$jo_root->{$color} = split_w($jo_root->{$color});
 
 	genDataPack("template.csv",$jo_root->{$color}, $color);
 
@@ -112,7 +115,7 @@ sub handle_size{
 	$jo->{price}=getPrice($content);
 
 	my $rat = 7.0;
-	$jo->{price_cny}=$jo->{price} * $rat;
+	$jo->{price_cny}=ceil($jo->{price} * $rat);
 
 	$jo->{list_price}=getListPrice($content);
 	$jo->{list_price} = $jo->{price} if ! defined $jo->{list_price};
@@ -206,6 +209,31 @@ sub merge_w{
 	$jo->{"$key1-$key2"} = $jo->{$p};
 	delete $jo->{$p};
 
+	return $jo;
+}
+
+sub split_w{
+	my $jo = shift;
+
+	
+	for my $wr (sort keys $jo){
+		my $price_hash = {};
+		for (my $i=0;$i<scalar(@{$jo->{$wr}});$i++){
+			my $price = $jo->{$wr}->[$i]->{price_cny};
+			if(defined $price_hash->{$price}){
+				push $price_hash->{$price}, $jo->{$wr}->[$i];
+			}else{
+				$price_hash->{$price} = [ $jo->{$wr}->[$i] ];
+			}
+		}
+		delete $jo->{$wr};
+
+		$i=1;
+		for my $arr ( values %{$price_hash}){
+			$jo->{"$wr - $i"} = $arr;
+			$i++;
+		}
+	}
 	return $jo;
 }
 
