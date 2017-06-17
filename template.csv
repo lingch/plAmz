@@ -1,4 +1,4 @@
-﻿{$OUT .= "$jo_size_1->{title_cn} ($jo_size_1->{color} $size_range)"}	50010167	""	1	"美国"	"美国"	1	{$jo_size_1->{price_cny}}	"0.00"	{
+﻿{$OUT .= "$jo_size_1->{title_cn} ($jo_size_1->{color_cn} $size_range)"}	50010167	"1325186005"	1	"美国"	"美国"	1	{$jo_size_1->{price_cny}}	"0.00"	{
 	my $n = 0;
 	for my $jo_size (@{$jo_size_range}){
 		$n += $jo_size->{count};

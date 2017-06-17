@@ -85,11 +85,17 @@ sub translate{
 	my $str = shift;
 
 	my $dic={
-		"Levi's Men's 501 Original-Fit Jean" => "李维斯/Levi's男士501经典款牛仔裤",
+		"Levi's Men's 501 Original-Fit Jean" => "李维斯/Levi's男士501经典款",
 		"Dark Charcoal Garment Dye" => "暗木炭色",
 		"Cobalt Blue/Black Fill" => "深蓝",
 		"Black/Black/Black" => "黑",
-		"Black" => "黑"
+		"^Black\$" => "黑",
+		"^Blue\$" => "蓝",
+		"18 Months Green" => "青",
+		"Blue \\(Light Broken-in\\)" => "浅蓝1",
+		"Blue \\(Light Stonewash\\)" => "浅蓝2",
+		"Blue \\(Marlon\\)" => "Marlon蓝",
+		"Blue \\(Onewash\\)" => "深水洗蓝"
 	};
 
 	for my $key (keys %{$dic}){
@@ -104,7 +110,7 @@ sub handle_size{
 
 	my $asin = $jo->{asin};
 	my $color = $jo->{color};
-	#$jo->{color_cn} = translate($jo->{color});
+	$jo->{color_cn} = translate($jo->{color});
 
 	my $size_p =  normalizePath($jo->{size});
 	my $color_p = normalizePath($color);
@@ -118,7 +124,6 @@ sub handle_size{
 	$jo->{size_p} = $size_p;
 
 	print "retrieving $asin: $color, $jo->{size}\r\n";
-	#$asin = 'B0151Z1DIG';
 
 	my $filename = "$base_local/$path/page.html";
 
@@ -251,7 +256,7 @@ sub split_w{
 
 		$i=1;
 		for my $arr ( values %{$price_hash}){
-			$jo->{"$wr - $i"} = $arr;
+			$jo->{"$wr-$i"} = $arr;
 			$i++;
 		}
 	}
