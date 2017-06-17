@@ -80,11 +80,31 @@ sub genDataPack{
 
 }
 
+
+sub translate{
+	my $str = shift;
+
+	my $dic={
+		"Levi's Men's 501 Original-Fit Jean" => "李维斯/Levi's男士501经典款牛仔裤",
+		"Dark Charcoal Garment Dye" => "暗木炭色",
+		"Cobalt Blue/Black Fill" => "深蓝",
+		"Black/Black/Black" => "黑",
+		"Black" => "黑"
+	};
+
+	for my $key (keys %{$dic}){
+		$str =~ s/$key/$dic->{$key}/g;
+	}
+
+	return $str;
+}
+
 sub handle_size{
 	my $jo = shift;
 
 	my $asin = $jo->{asin};
 	my $color = $jo->{color};
+	#$jo->{color_cn} = translate($jo->{color});
 
 	my $size_p =  normalizePath($jo->{size});
 	my $color_p = normalizePath($color);
@@ -111,6 +131,7 @@ sub handle_size{
 	
 	
 	$jo->{title}=getTitle($content);
+	$jo->{title_cn} = translate($jo->{title});
 	
 	$jo->{price}=getPrice($content);
 
