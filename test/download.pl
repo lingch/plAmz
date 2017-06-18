@@ -8,7 +8,8 @@ download1();
 sub download1{
 
 	my $d = MyDownloader->new();
-	$d->download(url=>"http://baidu.com",filename=>"a.html");
+	$d->download(url=>"http://baidu.com",filename=>"a.html",
+		cache_dir=>"test");
 
 	$d->clearCache();
 }

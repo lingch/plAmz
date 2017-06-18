@@ -28,11 +28,11 @@ sub download{
 	die "parameter filename is required" unless defined $filename;
 
 	my $cache_dir = $self->{args}->{cache_dir};
-	my $cache_sec = $self->{args}->{cache_sec};
+	my $cache_sec = $self->{args}->{cache_sec} or 300; #default 300 second
 	my $url_hash = md5_hex($url);
-	my $cache_filename = "$cache_dir/$url_hash";
+	my $cache_filename = $self->{cache_filename} = "$cache_dir/$url_hash";
 
-	if(defined $cache_dir and defined $cache_sec and fileMTimeDelta($cache_filename) < $cache_sec){
+	if(defined $cache_dir and Util::fileMTimeDelta($cache_filename) < $cache_sec){
 		return Util::readFile($cache_filename);
 	}
 
