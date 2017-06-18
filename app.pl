@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+package Levis;
 
 use strict;
 use LWP::Simple;
@@ -6,7 +7,6 @@ use JSON::Parse 'parse_json';
 
 use Error qw(:try);
 
-use Data::GUID;
 use Digest::MD5 qw(md5_hex);
 use Text::Template;
 use POSIX;
@@ -15,43 +15,57 @@ use File::Path qw(make_path remove_tree);
 
 use Util;
 use MyDownloader;
+
 require "html_parser.pl";
 
-my $url = 'https://www.amazon.com/dp/B0018OR118';
-my $base_local = "/var/www/storage";
-my $filename = 'root.html';
-my $document = undef;
+sub new{
+	my $self = {
 
-if(defined $url && defined $filename){
-	print "downloading root.html\n";
-	$document = MyDownloader->new()->download(url=>$url,
-		filename=>$filename,
-		cache_dir=>".",
-		cache_sec=>1000000,
-		bytes=>1000000);
+	};
+
+	return bless $self,shift;
 }
+my $jo_img;
+my $base_local = "/var/www/storage";
 
-my $jsonstr = getJsonText($document,'var dataToReturn =','return dataToReturn;');
-my $jo_data = parse_json ($jsonstr);
-my $jo_asin = $jo_data->{"dimensionValuesDisplayData"};
+newDownload();
+sub newDownload{
+	my $self = shift;
 
-$jsonstr = getJsonText($document,'data["colorImages"] = ','data["heroImage"]');
-my $jo_img = parse_json ($jsonstr);
-
-our $jo_root = restructure($jo_asin);
-
-my $n=0;
-for my $color ( sort keys %{$jo_root}){
+	my $root_url = 'https://www.amazon.com/dp/B0018OR118';
 	
-	$jo_root->{$color} = handle_color($jo_root->{$color},$color);
+	my $filename = 'root.html';
+	my $document = undef;
 
-	$jo_root->{$color} = split_w($jo_root->{$color});
+	if(defined $root_url && defined $filename){
+		print "downloading root.html\n";
+		$document = MyDownloader->new()->download(url=>$root_url,
+			filename=>$filename,
+			cache_dir=>".",
+			cache_sec=>1000000,
+			bytes=>1000000);
+	}
 
-	genDataPack("template/data.csv",$jo_root->{$color}, $color);
+	my $jsonstr = getJsonText($document,'var dataToReturn =','return dataToReturn;');
+	my $jo_data = parse_json ($jsonstr);
+	my $jo_asin = $jo_data->{"dimensionValuesDisplayData"};
 
-	$n++;
+	$jsonstr = getJsonText($document,'data["colorImages"] = ','data["heroImage"]');
+	$jo_img = parse_json ($jsonstr);
 
-	# last if $n == 17;
+	our $jo_root = restructure($jo_asin);
+
+	my $n=0;
+	for my $color ( sort keys %{$jo_root}){
+		
+		$jo_root->{$color} = handle_color($jo_root->{$color},$color);
+
+		$jo_root->{$color} = split_w($jo_root->{$color});
+
+		genDataPack("template/data.csv",$jo_root->{$color}, $color);
+
+		$n++;
+	}
 }
 
 sub genDataPack{
@@ -374,5 +388,7 @@ sub getNodeText{
 	return $res;
 }
 
+1;
 
+__END__
 
