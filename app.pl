@@ -309,7 +309,7 @@ sub handle_size_range {
 		}
 		catch Error with {
 			my $ex = shift;
-			print "failed: " . $ex->text . " \r\n";
+			print "failed: $jo_i->{asin} $jo_i->{color} $jo_i->{size} " . $ex->text . " \r\n";
 		};
 	}
 
