@@ -1,37 +1,39 @@
-#!/usr/bin/perl
+#!/bin/perl
+package MyDownloader;
 
+use strict;
 use LWP::UserAgent;
 use Digest::MD5 qw(md5_hex);
+use Util;
 
-sub  normalizePath {
-	my $path = shift;
-	$path =~ s/[\s\/]+/-/g;
-	return $path;
+sub new { 
+	my $class = shift; 
+	my $self = {
+		args => undef,
+		cache_filename => undef
+	}; 
+	bless $self, $class; 
+
+	return $self;
 }
-
-sub fileMTimeDelta{
-	my $filename = shift;
-	my $mtime = (stat $filename)[9];
-	my $currentTime = time();
-
-	return $currentTime - $mtime;
-}
-
 
 sub download{
-	my %args = @_;
+	my $self = shift;
+	$self->{args} = {@_};
 
-	my $url = $args{url} || die "parameter url is required";
-	my $filename = $args{filename} || die "parameter filename is required";
-	my $bytes = $args{bytes};
+	my $url = $self->{args}->{url};
+	my $filename = $self->{args}->{filename};
 
-	my $cache_dir = $args{cache_dir};
-	my $cache_sec = $args{cache_sec};
+	die "parameter url is required" unless defined $url;
+	die "parameter filename is required" unless defined $filename;
+
+	my $cache_dir = $self->{args}->{cache_dir};
+	my $cache_sec = $self->{args}->{cache_sec};
 	my $url_hash = md5_hex($url);
 	my $cache_filename = "$cache_dir/$url_hash";
 
 	if(defined $cache_dir and defined $cache_sec and fileMTimeDelta($cache_filename) < $cache_sec){
-		return readFile($cache_filename);
+		return Util::readFile($cache_filename);
 	}
 
 	my $ua = LWP::UserAgent->new(ssl_opts=>{verify_hostname=>0});
@@ -48,13 +50,11 @@ sub download{
 		);
 	$ua->default_headers($headers);
 
-	if(defined $bytes){
-		$ua->max_size($bytes);
-	}
+	$ua->max_size($self->{args}->{bytes}) if defined $self->{args}->{bytes};
 
 	my $resp = $ua->get($url);
 
-	writeFile($resp->content,$filename);
+	Util::writeFile($resp->content,$filename);
 
 	if(defined $cache_dir){
 		link $filename, $cache_filename;
@@ -63,45 +63,12 @@ sub download{
 	return $resp->content;
 }
 
-sub writeFile{
-	my $content = shift;
-	my $filename = shift;
-
-	open (MYFILE, ">$filename");
-	print MYFILE $content;
-	close (MYFILE); 
-}
-
-sub  readFile {
-	my $filename = shift;
-	open(FILE, $filename) or die "Cant read file $filename";
-	$document = do{local $/; <FILE>};
-	close(FILE);
-	return $document;
-}
-
-# Perl trim function to remove whitespace from the start and end of the string
-sub trim($)
-{
-	my $string = shift;
-	$string =~ s/^\s+//;
-	$string =~ s/\s+$//;
-	return $string;
-}
-# Left trim function to remove leading whitespace
-sub ltrim($)
-{
-	my $string = shift;
-	$string =~ s/^\s+//;
-	return $string;
-}
-# Right trim function to remove trailing whitespace
-sub rtrim($)
-{
-	my $string = shift;
-	$string =~ s/\s+$//;
-	return $string;
+sub clearCache{
+	my $self = shift;
+	unlink $self->{cache_filename} if -e $self->{cache_filename};
 }
 
 1;
+
+__END__
 

@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 
+use strict;
 use LWP::Simple;
 use JSON::Parse 'parse_json';
 use LWP::UserAgent;
@@ -16,6 +17,7 @@ require "util.pl";
 require "html_parser.pl";
 
 my $url = 'https://www.amazon.com/dp/B0018OR118';
+my $base_local = "/var/www/storage";
 my $filename = 'root.html';
 my $document = undef;
 
@@ -106,6 +108,34 @@ sub translate{
 	return $str;
 }
 
+sub downloadImgs{
+	my $color = shift;
+	my $path = shift;
+
+	my $imgs = $jo_img->{$color};
+	my $img_local = [];
+	my $img_remote = [];
+	my $c = 1;
+	for (@{$imgs}){
+		my $imgObj = $_;
+		my $imgL = $imgObj->{hiRes} || $imgObj->{large};
+		next if ! defined $imgL;
+
+		my $ext = substr($imgL,rindex($imgL,".")+1);
+		my $filename_local = "$c.$ext";
+		my $fullpath = "$path/$filename_local";
+		print "\tretrieving $filename_local\r\n";
+		
+		download(url=>$imgL,filename=>$fullpath,cache_dir=>$base_local,cache_sec=>100000);
+
+		push $img_local, $fullpath;
+		push $img_remote, $imgL;
+		
+		$c++;
+	}
+	return ($img_local,$img_remote);
+}
+
 sub handle_size{
 	my $jo = shift;
 
@@ -116,7 +146,7 @@ sub handle_size{
 	my $size_p =  normalizePath($jo->{size});
 	my $color_p = normalizePath($color);
 
-	my $base_local = "/var/www/storage";
+	
 	my $base_url = "http://14.155.17.64:81";
 	my $path = "$color_p/$size_p";
 	make_path( "$base_local/$path/");
@@ -147,35 +177,7 @@ sub handle_size{
 	$jo->{list_price}=getListPrice($content);
 	$jo->{list_price} = $jo->{price} if ! defined $jo->{list_price};
 	
-	our $imgs = $jo_img->{$color};
-	my $img_local = [];
-	my $img_remote = [];
-	my $c = 1;
-	for (@{$imgs}){
-		my $imgObj = $_;
-		my $imgL = $imgObj->{hiRes} || $imgObj->{large};
-		next if ! defined $imgL;
-
-		my $imgNameHash = md5_hex($imgL);
-		my $imgNameHashFilename = "$base_local/$imgNameHash";
-		unless (-e $imgNameHashFilename) {
-			my $ext = substr($imgL,rindex($imgL,".")+1);
-			my $filename_local = "$c.$ext";
-			my $fullpath = "$base_local/$path/$filename_local";
-			print "\tretrieving $filename_local\r\n";
-			
-			download(url=>$imgL,filename=>$fullpath,cache_dir=>$base_local,cache_sec=>100000);
-
-			link $fullpath,$imgNameHashFilename;
-		}
-
-		push $img_local, $imgNameHashFilename;
-		push $img_remote, $imgL;
-		
-		$c++;
-	}
-	$jo->{imgs_local} = $img_local;
-	$jo->{imgs_remote} = $img_remote;
+	($jo->{imgs_local},$jo->{imgs_remote}) = downloadImgs($color,"$base_local/$path");
 
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime;
 	$jo->{datetime} = sprintf ("%d-%02d-%02d %02d:%02d:%02d", $year+1900,$mon+1,$mday,$hour,$min,$sec);
@@ -183,17 +185,6 @@ sub handle_size{
 	return $jo;
 }
 
-sub get_w{
-	my $jo = shift;
-	my $key = shift;
-
-	my $ret = {};
-	$ret->{p} = $jo->{$key};
-	delete $jo->{$key};
-	$ret->{suffix} = "$w";
-
-	return ($jo,$ret);
-}
 
 sub arr_count{
 	my $a1 = shift;
@@ -255,7 +246,7 @@ sub split_w{
 		}
 		delete $jo->{$wr};
 
-		$i=1;
+		my $i=1;
 		for my $arr ( values %{$price_hash}){
 			$jo->{"$wr-$i"} = $arr;
 			$i++;
