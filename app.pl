@@ -28,7 +28,7 @@ sub new{
 my $jo_img;
 my $base_local = "/var/www/storage";
 
-newDownload();
+newDownload(); 
 sub newDownload{
 	my $self = shift;
 
