@@ -40,11 +40,11 @@ for my $color ( sort keys %{$jo_root}){
 
 	$jo_root->{$color} = split_w($jo_root->{$color});
 
-	genDataPack("template.csv",$jo_root->{$color}, $color);
+	genDataPack("template/data.csv",$jo_root->{$color}, $color);
 
 	$n++;
 
-	last if $n == 17;
+	# last if $n == 17;
 }
 
 sub genDataPack{
@@ -93,9 +93,10 @@ sub translate{
 		"^Blue\$" => "蓝",
 		"18 Months Green" => "青",
 		"Blue \\(Light Broken-in\\)" => "浅蓝1",
-		"Blue \\(Light Stonewash\\)" => "浅蓝2",
+		"Blue \\(Light Stonewash\\)" => "轻洗浅蓝",
 		"Blue \\(Marlon\\)" => "Marlon蓝",
-		"Blue \\(Onewash\\)" => "深水洗蓝"
+		"Blue \\(Onewash\\)" => "深水洗蓝",
+		"Medium Stonewash" => "中洗浅蓝"
 	};
 
 	for my $key (keys %{$dic}){
@@ -132,7 +133,7 @@ sub handle_size{
 		filename=>$filename,
 		cache_dir=>"$base_local",
 		cache_sec=>1000000,
-		bytes=>1000000);
+		bytes=>200000);
 	
 	
 	$jo->{title}=getTitle($content);

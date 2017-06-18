@@ -4,7 +4,7 @@
 		$n += $jo_size->{count};
 	}
 	$OUT .= "$n";
-}	7	2	1.21064e+19	1.82202e-37	0	0	0	2	1	""	"{$jo_size_1->{title}}"	"20000:3271216;42722636:3250994;122216515:29535;122276111:20525;{
+}	7	2	1.21064e+19	1.82202e-37	0	0	0	2	1	""	"<P><IMG src=""FILE:///\\zbox-desktop\rootdir\root\plAmz\detail\detail_header.jpg""></P><P><IMG alt=tihuanwenzi src=""FILE:///\\zbox-desktop\rootdir\root\plAmz\detail\detail.jpg""></P>"	"20000:3271216;42722636:3250994;122216515:29535;122276111:20525;{
 #宝贝属性
 	$OUT .= "1627207:-1001;";
 	$i = 0;
