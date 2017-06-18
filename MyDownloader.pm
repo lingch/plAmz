@@ -4,6 +4,7 @@ package MyDownloader;
 use strict;
 use LWP::UserAgent;
 use Digest::MD5 qw(md5_hex);
+use File::Path qw(make_path remove_tree);
 use Util;
 
 sub new { 
@@ -57,6 +58,7 @@ sub download{
 	Util::writeFile($resp->content,$filename);
 
 	if(defined $cache_dir){
+		make_path( $cache_dir) unless -e $cache_dir;
 		link $filename, $cache_filename;
 	}
 

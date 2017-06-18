@@ -3,7 +3,7 @@
 use strict;
 use LWP::Simple;
 use JSON::Parse 'parse_json';
-use LWP::UserAgent;
+
 use Error qw(:try);
 
 use Data::GUID;
@@ -13,7 +13,8 @@ use POSIX;
 
 use File::Path qw(make_path remove_tree);
 
-require "util.pl";
+use Util;
+use MyDownloader;
 require "html_parser.pl";
 
 my $url = 'https://www.amazon.com/dp/B0018OR118';
@@ -23,7 +24,11 @@ my $document = undef;
 
 if(defined $url && defined $filename){
 	print "downloading root.html\n";
-	$document = download(url=>$url,filename=>$filename,cache_dir=>".",cache_sec=>1000000,bytes=>1000000);
+	$document = MyDownloader->new()->download(url=>$url,
+		filename=>$filename,
+		cache_dir=>".",
+		cache_sec=>1000000,
+		bytes=>1000000);
 }
 
 my $jsonstr = getJsonText($document,'var dataToReturn =','return dataToReturn;');
@@ -52,7 +57,7 @@ for my $color ( sort keys %{$jo_root}){
 sub genDataPack{
 	our ($temp_filename, $jo, $color) = @_;
 	my $prefix = "taobao-data";
-	my $color_p = normalizePath($color);
+	my $color_p = Util::normalizePath($color);
 
 	# $jo_color_w->{hello} = "world";
 	for our $size_range (keys %{$jo}){
@@ -76,7 +81,7 @@ sub genDataPack{
 
 		my $result = $template->fill_in() or die $Text::Template::ERROR;
 
-		writeFile($result,"$prefix/$color_p/$size_range.csv");
+		Util::writeFile($result,"$prefix/$color_p/$size_range.csv");
 	}
 	
 
@@ -124,9 +129,12 @@ sub downloadImgs{
 		my $ext = substr($imgL,rindex($imgL,".")+1);
 		my $filename_local = "$c.$ext";
 		my $fullpath = "$path/$filename_local";
-		print "\tretrieving $filename_local\r\n";
+		#print "\tretrieving $filename_local\r\n";
 		
-		download(url=>$imgL,filename=>$fullpath,cache_dir=>$base_local,cache_sec=>100000);
+		MyDownloader->new()->download(url=>$imgL,
+			filename=>$fullpath,
+			cache_dir=>"$base_local/cache_img",
+			cache_sec=>10000000);
 
 		push $img_local, $fullpath;
 		push $img_remote, $imgL;
@@ -143,8 +151,8 @@ sub handle_size{
 	my $color = $jo->{color};
 	$jo->{color_cn} = translate($jo->{color});
 
-	my $size_p =  normalizePath($jo->{size});
-	my $color_p = normalizePath($color);
+	my $size_p =  Util::normalizePath($jo->{size});
+	my $color_p = Util::normalizePath($color);
 
 	
 	my $base_url = "http://14.155.17.64:81";
@@ -159,29 +167,37 @@ sub handle_size{
 	my $filename = "$base_local/$path/page.html";
 
 	my $suburl = "https://www.amazon.com/dp/$asin?psc=1";
-	my $content = download(url=>$suburl,
-		filename=>$filename,
-		cache_dir=>"$base_local",
-		cache_sec=>1000000,
-		bytes=>200000);
-	
-	
-	$jo->{title}=getTitle($content);
-	$jo->{title_cn} = translate($jo->{title});
-	
-	$jo->{price}=getPrice($content);
+	my $d = MyDownloader->new();
+	try{
+		my $content = $d->download(url=>$suburl,
+			filename=>$filename,
+			cache_dir=>"$base_local/cache_page",
+			cache_sec=>1000000,
+			bytes=>200000);
+		
+		
+		$jo->{title}=getTitle($content);
+		$jo->{title_cn} = translate($jo->{title});
+		
+		$jo->{price}=getPrice($content);
 
-	my $rat = 7.0;
-	$jo->{price_cny}=ceil($jo->{price} * $rat);
+		my $rat = 7.0;
+		$jo->{price_cny}=ceil($jo->{price} * $rat);
 
-	$jo->{list_price}=getListPrice($content);
-	$jo->{list_price} = $jo->{price} if ! defined $jo->{list_price};
+		$jo->{list_price}=getListPrice($content);
+		$jo->{list_price} = $jo->{price} if ! defined $jo->{list_price};
+		
+		($jo->{imgs_local},$jo->{imgs_remote}) = downloadImgs($color,"$base_local/$path");
+
+		my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime;
+		$jo->{datetime} = sprintf ("%d-%02d-%02d %02d:%02d:%02d", $year+1900,$mon+1,$mday,$hour,$min,$sec);
+
+	}catch Error with{
+		my $ex = shift;
+		$d->clearCache();
+		$ex->throw;
+	};
 	
-	($jo->{imgs_local},$jo->{imgs_remote}) = downloadImgs($color,"$base_local/$path");
-
-	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime;
-	$jo->{datetime} = sprintf ("%d-%02d-%02d %02d:%02d:%02d", $year+1900,$mon+1,$mday,$hour,$min,$sec);
-
 	return $jo;
 }
 
