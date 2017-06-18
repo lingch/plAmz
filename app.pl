@@ -302,10 +302,10 @@ sub handle_size_range {
 	my $jo = shift;
 	my $size_range = shift;
 
-	for (my $i = 0; $i<scalar(@{$jo}); $i++){
+	my $new_jo = [];
+	for my $jo_i (@{$jo}){
 		try {
-			$jo->[$i] = handle_size($jo->[$i]);
-			
+			push $new_jo, handle_size($jo_i);
 		}
 		catch Error with {
 			my $ex = shift;
@@ -313,7 +313,7 @@ sub handle_size_range {
 		};
 	}
 
-	return $jo;
+	return $new_jo;
 }
 sub handle_color{
 	my $jo = shift;
