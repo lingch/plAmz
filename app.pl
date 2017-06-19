@@ -15,13 +15,16 @@ use File::Path qw(make_path remove_tree);
 
 use Util;
 use MyDownloader;
+use Translate;
 
 require "html_parser.pl";
 
 sub new{
 	my $self = {
-
+		trans=>undef
 	};
+
+	$self->{trans} = Translate->new("dict.txt");
 
 	return bless $self,shift;
 }
@@ -29,7 +32,7 @@ my $jo_img;
 my $base_local = "/var/www/storage";
 my $pageSize = 200000;
 
-newDownload(); 
+Levis->new()->newDownload(); 
 sub newDownload{
 	my $self = shift;
 
@@ -59,7 +62,7 @@ sub newDownload{
 	my $n=0;
 	for my $color ( sort keys %{$jo_root}){
 		
-		$jo_root->{$color} = handle_color($jo_root->{$color},$color);
+		$jo_root->{$color} = $self->handle_color($jo_root->{$color},$color);
 
 		$jo_root->{$color} = split_w($jo_root->{$color});
 
@@ -102,33 +105,6 @@ sub genDataPack{
 
 }
 
-my $dict = undef;
-sub readDict {
-	my $filename = shift;
-	open FILE, "<$filename" or die "failed to open $filename";
-	my $dict = {};
-	while (my $line = <FILE>){
-		chomp($line);
-		my ($key,$value) = split(/,/,$line);
-		$dict->{$key} = $value;
-	}
-	close FILE;
-	return $dict;
-}
-
-sub translate{
-	unless (defined $dict) {
-		$dict = readDict("dict.txt")
-	}
-
-	my $str = shift;
-
-	for my $key (keys %{$dict}){
-		$str =~ s/^$key$/$dict->{$key}/g;
-	}
-
-	return $str;
-}
 
 sub downloadImgs{
 	my $color = shift;
@@ -162,11 +138,12 @@ sub downloadImgs{
 }
 
 sub handle_size{
+	my $self = shift;
 	my $jo = shift;
 
 	my $asin = $jo->{asin};
 	my $color = $jo->{color};
-	$jo->{color_cn} = translate($jo->{color});
+	$jo->{color_cn} = $self->{trans}->translate($jo->{color});
 
 	my $size_p =  Util::normalizePath($jo->{size});
 	my $color_p = Util::normalizePath($color);
@@ -194,7 +171,7 @@ sub handle_size{
 		
 		
 		$jo->{title}=getTitle($content);
-		$jo->{title_cn} = translate($jo->{title});
+		$jo->{title_cn} = $self->{trans}->translate($jo->{title});
 		
 		$jo->{price}=getPrice($content);
 
@@ -323,13 +300,15 @@ sub restructure{
 }
 
 sub handle_size_range {
+	my $self = shift;
+
 	my $jo = shift;
 	my $size_range = shift;
 
 	my $new_jo = [];
 	for my $jo_i (@{$jo}){
 		try {
-			push $new_jo, handle_size($jo_i);
+			push $new_jo, $self->handle_size($jo_i);
 		}
 		catch Error with {
 			my $ex = shift;
@@ -340,11 +319,13 @@ sub handle_size_range {
 	return $new_jo;
 }
 sub handle_color{
+	my $self = shift;
+
 	my $jo = shift;
 	my $color = shift;
 
 	for my $size_range (sort keys $jo){
-		$jo->{$size_range} = handle_size_range($jo->{$size_range}, $size_range);
+		$jo->{$size_range} = $self->handle_size_range($jo->{$size_range}, $size_range);
 	}
 
 	return $jo;
