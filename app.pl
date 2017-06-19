@@ -27,6 +27,7 @@ sub new{
 }
 my $jo_img;
 my $base_local = "/var/www/storage";
+my $pageSize = 200000;
 
 newDownload(); 
 sub newDownload{
@@ -101,27 +102,29 @@ sub genDataPack{
 
 }
 
+my $dict = undef;
+sub readDict {
+	my $filename = shift;
+	open FILE, "<$filename" or die "failed to open $filename";
+	my $dict = {};
+	while (my $line = <FILE>){
+		chomp($line);
+		my ($key,$value) = split(/,/,$line);
+		$dict->{$key} = $value;
+	}
+	close FILE;
+	return $dict;
+}
 
 sub translate{
+	unless (defined $dict) {
+		$dict = readDict("dict.txt")
+	}
+
 	my $str = shift;
 
-	my $dic={
-		"Levi's Men's 501 Original-Fit Jean" => "李维斯/Levi's男士501经典款",
-		"Dark Charcoal Garment Dye" => "暗木炭色",
-		"Cobalt Blue/Black Fill" => "深蓝",
-		"Black/Black/Black" => "黑",
-		"^Black\$" => "黑",
-		"^Blue\$" => "蓝",
-		"18 Months Green" => "青",
-		"Blue \\(Light Broken-in\\)" => "浅蓝1",
-		"Blue \\(Light Stonewash\\)" => "轻洗浅蓝",
-		"Blue \\(Marlon\\)" => "Marlon蓝",
-		"Blue \\(Onewash\\)" => "深水洗蓝",
-		"Medium Stonewash" => "中洗浅蓝"
-	};
-
-	for my $key (keys %{$dic}){
-		$str =~ s/$key/$dic->{$key}/g;
+	for my $key (keys %{$dict}){
+		$str =~ s/^$key$/$dict->{$key}/g;
 	}
 
 	return $str;
@@ -187,7 +190,7 @@ sub handle_size{
 			filename=>$filename,
 			cache_dir=>"$base_local/cache_page",
 			cache_sec=>1000000,
-			bytes=>200000);
+			bytes=>$pageSize);
 		
 		
 		$jo->{title}=getTitle($content);
@@ -208,7 +211,7 @@ sub handle_size{
 
 	}catch Error with{
 		my $ex = shift;
-		$d->clearCache();
+		#$d->clearCache();
 		$ex->throw;
 	};
 	
