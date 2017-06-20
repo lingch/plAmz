@@ -7,14 +7,14 @@ sub getJsonText{
 	my $markEnd = shift;
 
 	my $idxStart = index($document, $markStart);
-	throw Exception("start mark $markStart not found") if $idxStart < 0;
+	throw Error::Simple("start mark $markStart not found") if $idxStart < 0;
 	$idxStart = $idxStart + length($markStart);
 
 	my $idxEnd = index($document, $markEnd,$idxStart);
-	throw Exception("end mark $markEnd not found") if $idxEnd < 0;
+	throw Error::Simple("end mark $markEnd not found") if $idxEnd < 0;
 
 	$idxEnd = rindex($document, ';',$idxEnd);
-	throw Exception("; before end mark $markStart not found") if $idxEnd < 0;
+	throw Error::Simple("; before end mark $markStart not found") if $idxEnd < 0;
 
 	$jsonstr = substr($document,$idxStart,$idxEnd-$idxStart);
 
