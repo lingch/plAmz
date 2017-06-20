@@ -77,17 +77,15 @@ sub getAllAsins {
 
 sub updatePrice {
 	my $self = shift;
-	my $item = shift;
+	my $callback = shift;
 
 	my $coll = $self->{db}->get_collection($self->{collectionName}) 
 	or die "coll $self->{collectionName} not found";
 
-	my $res = $coll->replace_one ( {asin=>$item->{asin}}, 
-		{'$set' => {price_cny => $item->{price_cny}}},
-		{upsert=>1} 
-		);
-
-	return $res;
+	my $curor = $coll->find ( {},{asin=>1,price=>1,price_cny=>1});
+	while (my $row = $curor->next) {
+	    $callback->($row);
+	}
 }
 
 # sub drop{
