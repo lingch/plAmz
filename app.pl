@@ -39,7 +39,7 @@ my $jo_img;
 my $base_local = "/var/www/storage";
 my $pageSize = 200000;
 
-Levis->new()->newDownload(); 
+Levis->new()->updatePrice(); 
 sub newDownload{
 	my $self = shift;
 
@@ -77,6 +77,17 @@ sub newDownload{
 
 		$n++;
 	}
+}
+
+sub updatePrice {
+	my $self = shift;
+	$self->{store}->updatePrice(\&updateAsinPrice, $self);
+}
+sub updateAsinPrice {
+	my $item = shift;
+	my $self = shift;
+
+	$self->handle_size($item,0);
 }
 
 sub genDataPack{
@@ -147,6 +158,7 @@ sub downloadImgs{
 sub handle_size{
 	my $self = shift;
 	my $jo = shift;
+	my $cacheSec = shift;
 
 	my $asin = $jo->{asin};
 	my $color = $jo->{color};
@@ -173,7 +185,7 @@ sub handle_size{
 		my $content = $d->download(url=>$suburl,
 			filename=>$filename,
 			cache_dir=>"$base_local/cache_page",
-			cache_sec=>1000000,
+			cache_sec=>$cacheSec,
 			bytes=>$pageSize);
 		
 		
@@ -317,7 +329,7 @@ sub handle_size_range {
 	my $new_jo = [];
 	for my $jo_i (@{$jo}){
 		try {
-			push $new_jo, $self->handle_size($jo_i);
+			push $new_jo, $self->handle_size($jo_i,1000000);
 		}
 		catch Error with {
 			my $ex = shift;

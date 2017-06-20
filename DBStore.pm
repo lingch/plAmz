@@ -71,20 +71,21 @@ sub getAllAsins {
 	my $coll = $self->{db}->get_collection($self->{collectionName}) 
 	or die "coll $self->{collectionName} not found";
 
-	my $t = $coll->find();
+	my $t = $coll->find({});
 
 }
 
 sub updatePrice {
 	my $self = shift;
 	my $callback = shift;
+	my $param = shift;
 
 	my $coll = $self->{db}->get_collection($self->{collectionName}) 
 	or die "coll $self->{collectionName} not found";
 
 	my $curor = $coll->find ( {},{asin=>1,price=>1,price_cny=>1});
 	while (my $row = $curor->next) {
-	    $callback->($row);
+	    $callback->($row, $param);
 	}
 }
 
