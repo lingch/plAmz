@@ -1,6 +1,7 @@
 package DBStore;
 
 use strict;
+use utf8;
 
 use MongoDB ();
 use Data::Dumper qw(Dumper);
@@ -26,7 +27,7 @@ sub open {
 	my $self = shift;
 	my $host = shift;
 	my $port = shift;
-
+# $MongoDB::BSON::utf8_flag_on = 1;
 	$self->{client} = MongoDB::MongoClient->new(host => $host, port => $port);
 	$self->{db}   = $self->{client}->get_database( $self->{dbName}  );
 }
@@ -51,12 +52,27 @@ sub update {
 	my $coll = $self->{db}->get_collection($self->{collectionName}) 
 	or die "coll $self->{collectionName} not found";
 
+	#TODO: dont know why data in db not utf-8 encoded, to be investigated
+	# $item->{title_cn} = utf8::decode($item->{title_cn});
+	# $item->{color_cn} = utf8::decode($item->{color_cn});
 	my $res = $coll->replace_one ( {asin=>$item->{asin}}, 
 		$item,
 		{upsert=>1} 
 		);
 
+	# my $t = $coll->find_one({asin=>$item->{asin}});
+
 	return $res;
+}
+
+sub getAllAsins {
+	my $self = shift;
+
+	my $coll = $self->{db}->get_collection($self->{collectionName}) 
+	or die "coll $self->{collectionName} not found";
+
+	my $t = $coll->find();
+
 }
 
 sub updatePrice {

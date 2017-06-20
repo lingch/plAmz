@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+﻿#!/usr/bin/perl
 package Levis;
 
 use strict;
@@ -10,24 +10,31 @@ use Error qw(:try);
 use Digest::MD5 qw(md5_hex);
 use Text::Template;
 use POSIX;
+use utf8;
 
 use File::Path qw(make_path remove_tree);
 
 use Util;
 use MyDownloader;
 use Translate;
+use DBStore;
 
 require "html_parser.pl";
 
 sub new{
-	my $self = {
-		trans=>undef
-	};
+	my $class = shift;
+
+	my $self = bless {
+		trans=>undef,
+		store=>undef
+	}, $class;
 
 	$self->{trans} = Translate->new("dict.txt");
+	$self->{store} = DBStore->new("zbox-desktop",27017);
 
-	return bless $self,shift;
+	return $self;
 }
+
 my $jo_img;
 my $base_local = "/var/www/storage";
 my $pageSize = 200000;
@@ -186,6 +193,8 @@ sub handle_size{
 		my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime;
 		$jo->{datetime} = sprintf ("%d-%02d-%02d %02d:%02d:%02d", $year+1900,$mon+1,$mday,$hour,$min,$sec);
 
+		# $jo->{title_cn} = utf8::encode($jo->{title_cn});
+		$self->{store}->update($jo);
 	}catch Error with{
 		my $ex = shift;
 		#$d->clearCache();
