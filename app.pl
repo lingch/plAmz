@@ -133,6 +133,7 @@ sub updateAsinPrice {
 		my $ex = shift;
 		print $ex->text . "\n";
 		$item->{datetime} = Util::genTimestamp();
+		$item->{count} = 0;
 		$self->{store}->updateField($item);
 	}
 	
