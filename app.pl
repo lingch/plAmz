@@ -42,44 +42,7 @@ my $pageSize = 200000;
 
 # Levis->new()->updateAsinPrice2("B0151YZMDO"); 
 Levis->new()->updatePrice(); 
-sub newDownload{
-	my $self = shift;
 
-	my $root_url = 'https://www.amazon.com/dp/B0018OR118';
-	
-	my $filename = 'root.html';
-	my $document = undef;
-
-	if(defined $root_url && defined $filename){
-		print "downloading root.html\n";
-		$document = MyDownloader->new()->download(url=>$root_url,
-			filename=>$filename,
-			cache_dir=>".",
-			cache_sec=>1000000,
-			bytes=>1000000);
-	}
-
-	my $jsonstr = getJsonText($document,'var dataToReturn =','return dataToReturn;');
-	my $jo_data = parse_json ($jsonstr);
-	my $jo_asin = $jo_data->{"dimensionValuesDisplayData"};
-
-	$jsonstr = getJsonText($document,'data["colorImages"] = ','data["heroImage"]');
-	$jo_img = parse_json ($jsonstr);
-
-	our $jo_root = restructure($jo_asin);
-
-	my $n=0;
-	for my $color ( sort keys %{$jo_root}){
-		
-		$jo_root->{$color} = $self->handle_color($jo_root->{$color},$color);
-
-		$jo_root->{$color} = split_w($jo_root->{$color});
-
-		$self->genDataPack($jo_root->{$color}, $color);
-
-		$n++;
-	}
-}
 sub initBasic{
 	my $self = shift;
 
@@ -183,10 +146,7 @@ sub genDataPack{
 
 		Util::writeFile($result,"$prefix/$color_p/$size_range.csv");
 	}
-	
-
 }
-
 
 sub downloadImgs{
 	my $color = shift;
@@ -428,38 +388,6 @@ sub restructure{
 
 	for my $color (keys %{$jo}){
 		$jo->{$color} = merge_w($jo->{$color});
-	}
-
-	return $jo;
-}
-
-sub handle_size_range {
-	my $self = shift;
-
-	my $jo = shift;
-	my $size_range = shift;
-
-	my $new_jo = [];
-	for my $jo_i (@{$jo}){
-		try {
-			push @{$new_jo}, $self->handle_size($jo_i,1000000);
-		}
-		catch Error with {
-			my $ex = shift;
-			print "failed: $jo_i->{asin} $jo_i->{color} $jo_i->{size} " . $ex->text . " \r\n";
-		};
-	}
-
-	return $new_jo;
-}
-sub handle_color{
-	my $self = shift;
-
-	my $jo = shift;
-	my $color = shift;
-
-	for my $size_range (sort keys %{$jo}){
-		$jo->{$size_range} = $self->handle_size_range($jo->{$size_range}, $size_range);
 	}
 
 	return $jo;
