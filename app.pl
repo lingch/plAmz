@@ -36,6 +36,7 @@ sub new{
 	return $self;
 }
 
+my $jo_asin;
 my $jo_img;
 my $base_local = "/var/www/storage";
 my $pageSize = 200000;
@@ -43,7 +44,7 @@ my $pageSize = 200000;
 # Levis->new()->updateAsinPrice2("B0151YZMDO"); 
 Levis->new()->updatePrice(); 
 
-sub initBasic{
+sub loadRoot {
 	my $self = shift;
 
 	my $root_url = 'https://www.amazon.com/dp/B0018OR118';
@@ -62,10 +63,16 @@ sub initBasic{
 
 	my $jsonstr = getJsonText($document,'var dataToReturn =','return dataToReturn;');
 	my $jo_data = parse_json ($jsonstr);
-	my $jo_asin = $jo_data->{"dimensionValuesDisplayData"};
+	$jo_asin = $jo_data->{"dimensionValuesDisplayData"};
 
 	$jsonstr = getJsonText($document,'data["colorImages"] = ','data["heroImage"]');
 	$jo_img = parse_json ($jsonstr);
+}
+
+sub initBasic{
+	my $self = shift;
+
+	$self->loadRoot();
 
 	our $jo_root = transform2Flat($jo_asin);
 
@@ -78,6 +85,9 @@ sub initBasic{
 
 sub updatePrice {
 	my $self = shift;
+
+	$self->loadRoot();
+
 	$self->{store}->updatePrice(\&updateAsinPrice, $self);
 }
 sub updateAsinPrice2 {
