@@ -20,7 +20,7 @@ sub writeFile{
 	my $content = shift;
 	my $filename = shift;
 
-	open (MYFILE, ">$filename");
+	open (MYFILE, ">:utf8", "$filename");
 	print MYFILE $content;
 	close (MYFILE); 
 }

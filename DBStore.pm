@@ -52,9 +52,6 @@ sub update {
 	my $coll = $self->{db}->get_collection($self->{collectionName}) 
 	or die "coll $self->{collectionName} not found";
 
-	#TODO: dont know why data in db not utf-8 encoded, to be investigated
-	# $item->{title_cn} = utf8::decode($item->{title_cn});
-	# $item->{color_cn} = utf8::decode($item->{color_cn});
 	my $res = $coll->replace_one ( {asin=>$item->{asin}}, 
 		$item,
 		{upsert=>1} 
@@ -65,14 +62,29 @@ sub update {
 	return $res;
 }
 
-sub getAllAsins {
+sub updateField {
+	my $self = shift;
+	my $item = shift;
+
+	my $coll = $self->{db}->get_collection($self->{collectionName}) 
+	or die "coll $self->{collectionName} not found";
+
+	$coll->update({asin=>$item->{asin}}, {'$set'=>$item});
+}
+
+sub getAllItems {
 	my $self = shift;
 
 	my $coll = $self->{db}->get_collection($self->{collectionName}) 
 	or die "coll $self->{collectionName} not found";
 
-	my $t = $coll->find({});
+	my $ret = [];
+	my $cursor = $coll->find({});
+	while (my $obj = $cursor->next) {
+	    push @{$ret}, $obj;
+	}
 
+	return $ret;
 }
 
 sub updatePrice {
@@ -83,10 +95,10 @@ sub updatePrice {
 	my $coll = $self->{db}->get_collection($self->{collectionName}) 
 	or die "coll $self->{collectionName} not found";
 
-	my $curor = $coll->find ( {},{asin=>1,price=>1,price_cny=>1})
+	my $cursor = $coll->find ( {},{asin=>1,price=>1,price_cny=>1})
 		->sort({datetime=>1});
-	while (my $row = $curor->next) {
-	    $callback->($row, $param);
+	while (my $obj = $cursor->next) {
+	    $callback->($obj, $param);
 	}
 }
 
