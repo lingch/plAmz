@@ -79,7 +79,7 @@ sub getAllItems {
 	or die "coll $self->{collectionName} not found";
 
 	my $ret = [];
-	my $cursor = $coll->find({});
+	my $cursor = $coll->find({})->sort({datetime=>1});
 	while (my $obj = $cursor->next) {
 	    push @{$ret}, $obj;
 	}
