@@ -88,7 +88,11 @@ sub updatePrice {
 
 	$self->loadRoot();
 
-	$self->{store}->updatePrice(\&updateAsinPrice, $self);
+	my $items = $self->{store}->getAllItems();
+
+	for my $item (@{$items}){
+		$self->updateAsinPrice($item);
+	}
 }
 sub updateAsinPrice2 {
 	my $self = shift;
@@ -98,8 +102,10 @@ sub updateAsinPrice2 {
 	$self->handle_size($item);
 }
 sub updateAsinPrice {
-	my $item = shift;
 	my $self = shift;
+
+	my $item = shift;
+	
 	try{
 		$self->handle_size($item,0);
 	}catch Error with{
@@ -107,6 +113,8 @@ sub updateAsinPrice {
 		print $ex->text . "\n";
 		$item->{datetime} = Util::genTimestamp();
 		$item->{count} = 0;
+		$item->{err} = 1;
+		$item->{err_msg} = $ex->text;
 		$self->{store}->updateField($item);
 	}
 	

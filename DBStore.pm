@@ -99,27 +99,6 @@ sub getItem {
 	return $item;
 }
 
-sub updatePrice {
-	my $self = shift;
-	my $callback = shift;
-	my $param = shift;
-
-	my $coll = $self->{db}->get_collection($self->{collectionName}) 
-	or die "coll $self->{collectionName} not found";
-
-	my $cursor = $coll->find ( {},{asin=>1,price=>1,price_cny=>1})
-		->sort({datetime=>1});
-	while (my $obj = $cursor->next) {
-	    $callback->($obj, $param);
-	}
-}
-
-# sub drop{
-# 	my $self = shift;
-
-# 	$self->{db}->drop();
-# }
-
 1;
 
 __END__
