@@ -20,7 +20,7 @@ sub readDict {
 	my $self = shift;
 	my $filename = $self->{filename} = shift;
 
-	open FILE, "<$filename" or die "failed to open $filename";
+	open FILE, "<:utf8","$filename" or die "failed to open $filename";
 	my $dict = {};
 	while (my $line = <FILE>){
 		chomp($line);

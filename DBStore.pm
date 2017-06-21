@@ -32,18 +32,18 @@ sub open {
 	$self->{db}   = $self->{client}->get_database( $self->{dbName}  );
 }
 
-sub add {
-	my $self = shift;
-	my $item = shift;
+# sub add {
+# 	my $self = shift;
+# 	my $item = shift;
 
-	my $collection = $self->{db}->get_collection($self->{collectionName}) 
-		or die "collection $self->{collectionName} not found";
+# 	my $collection = $self->{db}->get_collection($self->{collectionName}) 
+# 		or die "collection $self->{collectionName} not found";
 
-	my $res = $collection->insert_one( $item );
-	throw Error::Simple("insert failed") if ! $res->acknowledged;
+# 	my $res = $collection->insert_one( $item );
+# 	throw Error::Simple("insert failed") if ! $res->acknowledged;
 
-	return $res->inserted_id->{value};
-}
+# 	return $res->inserted_id->{value};
+# }
 
 sub update {
 	my $self = shift;
@@ -83,7 +83,8 @@ sub updatePrice {
 	my $coll = $self->{db}->get_collection($self->{collectionName}) 
 	or die "coll $self->{collectionName} not found";
 
-	my $curor = $coll->find ( {},{asin=>1,price=>1,price_cny=>1});
+	my $curor = $coll->find ( {},{asin=>1,price=>1,price_cny=>1})
+		->sort({datetime=>1});
 	while (my $row = $curor->next) {
 	    $callback->($row, $param);
 	}

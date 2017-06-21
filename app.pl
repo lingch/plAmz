@@ -188,7 +188,8 @@ sub handle_size{
 			cache_sec=>$cacheSec,
 			bytes=>$pageSize);
 		
-		
+		$jo->{filename} = $filename;
+		$jo->{filename_cache} = $d->{filename_cache};
 		$jo->{title}=getTitle($content);
 		$jo->{title_cn} = $self->{trans}->translate($jo->{title});
 		
