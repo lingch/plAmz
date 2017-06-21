@@ -86,8 +86,13 @@ sub updatePrice {
 sub updateAsinPrice {
 	my $item = shift;
 	my $self = shift;
-
-	$self->handle_size($item,0);
+	try{
+		$self->handle_size($item,0);
+	}catch Error with{
+		my $ex = shift;
+		print $ex->text;
+	}
+	
 }
 
 sub genDataPack{
