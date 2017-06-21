@@ -87,6 +87,18 @@ sub getAllItems {
 	return $ret;
 }
 
+sub getItem {
+	my $self = shift;
+	my $filter = shift;
+
+	my $coll = $self->{db}->get_collection($self->{collectionName}) 
+	or die "coll $self->{collectionName} not found";
+
+	my $ret = [];
+	my $item = $coll->find_one($filter);
+	return $item;
+}
+
 sub updatePrice {
 	my $self = shift;
 	my $callback = shift;

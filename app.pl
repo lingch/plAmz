@@ -40,7 +40,8 @@ my $jo_img;
 my $base_local = "/var/www/storage";
 my $pageSize = 200000;
 
-Levis->new()->extraData(); 
+# Levis->new()->updateAsinPrice2("B0151YZMDO"); 
+Levis->new()->updatePrice(); 
 sub newDownload{
 	my $self = shift;
 
@@ -116,6 +117,13 @@ sub updatePrice {
 	my $self = shift;
 	$self->{store}->updatePrice(\&updateAsinPrice, $self);
 }
+sub updateAsinPrice2 {
+	my $self = shift;
+	my $asin = shift;
+
+	my $item = $self->{store}->getItem({asin=>$asin});
+	$self->handle_size($item);
+}
 sub updateAsinPrice {
 	my $item = shift;
 	my $self = shift;
@@ -124,6 +132,8 @@ sub updateAsinPrice {
 	}catch Error with{
 		my $ex = shift;
 		print $ex->text . "\n";
+		$item->{datetime} = Util::genTimestamp();
+		$self->{store}->updateField($item);
 	}
 	
 }
@@ -228,7 +238,7 @@ sub handle_size{
 	$jo->{color_p} = $color_p;
 	$jo->{size_p} = $size_p;
 
-	print "retrieving $asin: $color, $jo->{size}\r\n";
+	print "retrieving $jo->{datetime}, $asin, $color, $jo->{size}\r\n";
 
 	my $filename = "$base_local/$path/page.html";
 
@@ -256,11 +266,10 @@ sub handle_size{
 		
 		($jo->{imgs_local},$jo->{imgs_remote}) = downloadImgs($color,"$base_local/$path");
 
-		my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime;
-		$jo->{datetime} = sprintf ("%d-%02d-%02d %02d:%02d:%02d", $year+1900,$mon+1,$mday,$hour,$min,$sec);
+		$jo->{datetime} = Util::genTimestamp();
 
 		# $jo->{title_cn} = utf8::encode($jo->{title_cn});
-		$self->{store}->update($jo);
+		$self->{store}->updateField($jo);
 	}catch Error with{
 		my $ex = shift;
 		#$d->clearCache();

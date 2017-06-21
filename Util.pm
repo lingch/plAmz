@@ -2,6 +2,12 @@
 package Util;
 use LWP::UserAgent;
 
+
+sub genTimestamp{
+	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime;
+	my $ret = sprintf ("%d-%02d-%02d %02d:%02d:%02d", $year+1900,$mon+1,$mday,$hour,$min,$sec);
+	return $ret;
+}
 sub  normalizePath {
 	my $path = shift;
 	$path =~ s/[\s\/]+/-/g;
