@@ -2,9 +2,11 @@
 
 package TBCsv;
 
+use utf8;
+
 our $FIELD_LIST = [
 #宝贝名称
-"t_﻿title"                             ,
+"t_title"                             ,
 #宝贝类目
 "t_cid"                                ,
 #店铺类目

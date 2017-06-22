@@ -1,6 +1,7 @@
 package TBCsv;
 
 use strict;
+use utf8;
 
 use Storable qw(dclone);
 
@@ -88,20 +89,26 @@ sub splitSubItems {
 	my @sps = split(/[:;]/, $item->{t_skuProps});
 	delete $item->{t_skuProps};
 
-	my @titles = split(/ /,$item->{t_title});
-	die "parse title failed" if scalar(@titles) < 1;
-	$item->{t_title} = @titles[0];
+	# my @titles = split(/ /,$item->{t_title});
+	# die "parse title failed" if scalar(@titles) < 1;
+	# $item->{t_title} = @titles[0];
+	delete $item->{t_title};
+
+	delete $item->{t_inputValues};
+	delete $item->{t_modified};
+	delete $item->{t_price};
+	delete $item->{t_num};
+	delete $item->{t_description};
 
 	my $NG = 7;
 	my $subItems = [];
 	for (my $i=0;$i<scalar(@sps);$i=$i+$NG){
 		my $subItem = dclone($item);
 		
-		$subItem->{t_price} = @sps[$i+0];
-		$subItem->{t_num} = @sps[$i+1];
+
 		$subItem->{asin} = @sps[$i+2];
-		$subItem->{color} = $pmap->{"@sps[$i+3]:@sps[$i+4]"};
-		$subItem->{size} = $pmap->{"@sps[$i+5]:@sps[$i+6]"};
+		# $subItem->{color} = $pmap->{"@sps[$i+3]:@sps[$i+4]"};
+		# $subItem->{size} = $pmap->{"@sps[$i+5]:@sps[$i+6]"};
 		push @{$subItems},$subItem;
 	}
 

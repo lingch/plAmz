@@ -18,6 +18,7 @@ use Util;
 use MyDownloader;
 use Translate;
 use DBStore;
+use TBCsv;
 
 require "html_parser.pl";
 
@@ -42,7 +43,18 @@ my $base_local = "/var/www/storage";
 my $pageSize = 200000;
 
 # Levis->new()->updateAsinPrice2("B0151YZMDO"); 
-Levis->new()->updatePrice(); 
+Levis->new()->updateAllFromCsv(); 
+
+sub updateAllFromCsv{
+	my $self = shift;
+	my $items = TBCsv::parse("online.csv");
+	my $item = $items->[0] or die "empty csv";
+	delete $item->{asin};
+	# delete $item->{color};
+	# delete $item->{size};
+	# delete $item->{t_description};
+	$self->{store}->updateFieldMulti({},$item,{multi=>1});
+}
 
 sub loadRoot {
 	my $self = shift;
