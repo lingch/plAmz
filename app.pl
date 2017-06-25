@@ -162,23 +162,26 @@ sub genDataPack{
 		make_path( "$prefix/$color_p/$price");
 
 		for my $w (keys %{$jo_price}){
-			my $lines = $csv->stringify($w);
+			my $lines = $csv->stringify($jo_price->{$w});
+			my $w_p = Util::normalizePath($w);
+			Util::writeFile($lines,"$prefix/$color_p/$price/$w.csv");
+
 			# $jo_size->{nihao} = "shijie";
-			next unless defined $jo_price->{w}->{imgs_local};
-			for (my $i = 0; $i < scalar(@{$jo_size->{imgs_local}}); $i++) {
-				my $hash = md5_hex($jo_size->{imgs_remote}->[$i]);
-			    link $jo_size->{imgs_local}->[$i],"$prefix/$color_p/$price/$hash.tbi";
-			    $jo_size->{imgs_local}->[$i] = "$hash";
-			}
+			# next unless defined $jo_price->{w}->{imgs_local};
+			# for (my $i = 0; $i < scalar(@{$jo_size->{imgs_local}}); $i++) {
+			# 	my $hash = md5_hex($jo_size->{imgs_remote}->[$i]);
+			#     link $jo_size->{imgs_local}->[$i],"$prefix/$color_p/$price/$hash.tbi";
+			#     $jo_size->{imgs_local}->[$i] = "$hash";
+			# }
 		}
 
-		open F,"<:utf8",$temp_filename or die "cannot open template file $temp_filename";
-		my $template = Text::Template->new(TYPE => 'FILEHANDLE', SOURCE=> \*F)
-			or die "Couldn't construct template: $Text::Template::ERROR";
+		# open F,"<:utf8",$temp_filename or die "cannot open template file $temp_filename";
+		# my $template = Text::Template->new(TYPE => 'FILEHANDLE', SOURCE=> \*F)
+		# 	or die "Couldn't construct template: $Text::Template::ERROR";
 
-		my $result = $template->fill_in() or die $Text::Template::ERROR;
+		# my $result = $template->fill_in() or die $Text::Template::ERROR;
 
-		Util::writeFile($result,"$prefix/$color_p/$price.csv");
+		# Util::writeFile($result,"$prefix/$color_p/$price.csv");
 	}
 }
 
