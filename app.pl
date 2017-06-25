@@ -42,14 +42,22 @@ my $jo_img;
 my $base_local = "/var/www/storage";
 my $pageSize = 200000;
 
-# Levis->new()->updateAsinPrice2("B0151YZMDO"); 
+# Levis->new()->updateAsinPrice("B0151YZMDO"); 
 Levis->new()->updateAllFromCsv(); 
 
 sub updateAllFromCsv{
 	my $self = shift;
 	my $items = TBCsv::parse("online.csv");
 	my $item = $items->[0] or die "empty csv";
-	delete $item->{asin};
+
+	#delete those I dont want to update from online data
+	delete $item->{t_title};
+	delete $item->{t_inputValues};
+	# delete $item->{t_modified};
+	delete $item->{t_price};
+	delete $item->{t_num};
+	# delete $item->{t_description};
+
 	# delete $item->{color};
 	# delete $item->{size};
 	# delete $item->{t_description};
@@ -100,19 +108,13 @@ sub updatePrice {
 
 	$self->loadRoot();
 
-	my $items = $self->{store}->getAllItems();
+	my $items = $self->{store}->getItemsAll();
 
 	for my $item (@{$items}){
 		$self->updateAsinPrice($item);
 	}
 }
-sub updateAsinPrice2 {
-	my $self = shift;
-	my $asin = shift;
 
-	my $item = $self->{store}->getItem({asin=>$asin});
-	$self->handle_size($item);
-}
 sub updateAsinPrice {
 	my $self = shift;
 
@@ -135,7 +137,7 @@ sub updateAsinPrice {
 sub extraData{
 	my $self = shift;
 
-	my $items = $self->{store}->getAllItems();
+	my $items = $self->{store}->getItemsAll();
 
 	my $itemsTree = $self->transform2Tree($items);
 
@@ -245,12 +247,12 @@ sub handle_size{
 		$jo->{filename} = $filename;
 		$jo->{filename_cache} = $d->{filename_cache};
 		$jo->{title}=getTitle($content);
-		$jo->{title_cn} = $self->{trans}->translate($jo->{title});
+		$jo->{t_title} = $self->{trans}->translate($jo->{title});
 		
 		$jo->{price}=getPrice($content);
 
 		my $rat = 7.0;
-		$jo->{price_cny}=ceil($jo->{price} * $rat);
+		$jo->{t_price}=ceil($jo->{price} * $rat);
 
 		$jo->{list_price}=getListPrice($content);
 		$jo->{list_price} = $jo->{price} if ! defined $jo->{list_price};
@@ -259,7 +261,7 @@ sub handle_size{
 
 		$jo->{datetime} = Util::genTimestamp();
 
-		# $jo->{title_cn} = utf8::encode($jo->{title_cn});
+		# $jo->{t_title} = utf8::encode($jo->{t_title});
 		$self->{store}->updateField($jo);
 	}catch Error with{
 		my $ex = shift;
@@ -322,7 +324,7 @@ sub split_w{
 	for my $wr (sort keys %{$jo}){
 		my $price_hash = {};
 		for (my $i=0;$i<scalar(@{$jo->{$wr}});$i++){
-			my $price = $jo->{$wr}->[$i]->{price_cny};
+			my $price = $jo->{$wr}->[$i]->{t_price};
 			if(defined $price_hash->{$price}){
 				push @{$price_hash->{$price}}, $jo->{$wr}->[$i];
 			}else{
@@ -370,7 +372,7 @@ sub transform2Tree{
 
 	my $jo = {};
 	for my $item ( @{$items}){
-		my $title_cn = $item->{title} or next;
+		my $title = $item->{title} or next;
 		my $color = $item->{color} or next;
 		my $size = $item->{size} or next;
 		my $w = $item->{w} or next;

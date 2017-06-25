@@ -83,22 +83,13 @@ sub updateField {
 	$coll->update({asin=>$item->{asin}}, {'$set'=>$item});
 }
 
-sub getAllItems {
+sub getItemsAll {
 	my $self = shift;
 
-	my $coll = $self->{db}->get_collection($self->{collectionName}) 
-	or die "coll $self->{collectionName} not found";
-
-	my $ret = [];
-	my $cursor = $coll->find({})->sort({datetime=>1});
-	while (my $obj = $cursor->next) {
-	    push @{$ret}, $obj;
-	}
-
-	return $ret;
+	return $self->getItemsFilter({});
 }
 
-sub getItem {
+sub getItemsFilter {
 	my $self = shift;
 	my $filter = shift;
 
@@ -106,8 +97,12 @@ sub getItem {
 	or die "coll $self->{collectionName} not found";
 
 	my $ret = [];
-	my $item = $coll->find_one($filter);
-	return $item;
+	my $cursor = $coll->find($filter)->sort({datetime=>1});
+	while (my $obj = $cursor->next) {
+	    push @{$ret}, $obj;
+	}
+
+	return $ret;
 }
 
 1;

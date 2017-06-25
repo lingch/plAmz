@@ -1,16 +1,20 @@
 package TBCsv;
 
+use TBCsv::PropGenerator;
 use strict;
 use utf8;
 
 use Storable qw(dclone);
+use List::MoreUtils qw(first_index);
 
 require "FieldList.pm";
 
 sub new {
 	my $class = shift;
 	$class = ref $class if ref $class;
-	my $self = bless {}, $class;
+	my $self = bless {
+			out => undef
+		}, $class;
 	$self;
 }
 
@@ -75,6 +79,28 @@ sub parse_picture{
 	return $ret;
 }
 
+sub reform_hash{
+	my $hash = shift;
+
+	my $ret = "";
+	for my $key (keys %{$hash}){
+		$ret .= "key:$hash->{value};";
+	}
+
+	return $ret;
+}
+
+sub reform_array{
+	my $arr = shift;
+
+	my $ret = "";
+	for my $ele (@{$arr}){
+		$ret .= "$ele;";
+	}
+
+	return $ret;
+}
+
 sub splitSubItems {
 	my $item = shift;
 
@@ -88,17 +114,6 @@ sub splitSubItems {
 	#280:1:B01610UO76:1627207:-1001;20518:-1001
 	my @sps = split(/[:;]/, $item->{t_skuProps});
 	delete $item->{t_skuProps};
-
-	# my @titles = split(/ /,$item->{t_title});
-	# die "parse title failed" if scalar(@titles) < 1;
-	# $item->{t_title} = @titles[0];
-	delete $item->{t_title};
-
-	delete $item->{t_inputValues};
-	delete $item->{t_modified};
-	delete $item->{t_price};
-	delete $item->{t_num};
-	delete $item->{t_description};
 
 	my $NG = 7;
 	my $subItems = [];
@@ -136,6 +151,73 @@ sub parse {
 	return $items;
 }
 
+sub setByName {
+	my $self = shift;
+
+	my $name = shift;
+	my $value = shift;
+	my $combind = shift;
+
+	my $idxKey = first_index { $_ eq $name } @{$TBCsv::FIELD_LIST};
+	return undef if $idxKey < 0;
+	if(defined $combind and $combind != 0){
+		return $self->{out}[$idxKey] .= $value ;
+	}else{
+		return $self->{out}[$idxKey] = $value ;
+	}
+}
+#TODO: check the price
+sub stringify {
+	my $self = shift;
+	my $items = shift;
+
+	my @tmp = ('') x scalar(@{$TBCsv::FIELD_LIST});
+	$self->{out} = \@tmp;
+
+	my $item_0 = $items->[0];
+	for my $key (keys %{$item_0}){
+		$self->setByName($key,$item_0->{$key});
+	}
+
+	#t_input_custom_cpv
+	my $cg = TBCsv::PropGenerator->new('color');
+	my $sg = TBCsv::PropGenerator->new('size');
+	my $addCpv = {};
+	my $t_num = 0;
+	my $skuProps = "";
+	for my $item (@{$items}){
+		my $color = $item->{color};
+		my $size = $item->{size};
+		$addCpv->{$color} = $cg->generate() unless defined $addCpv->{$color};
+		$addCpv->{$size} = $sg->generate() unless defined $addCpv->{$size};
+		$skuProps .= "$item->{t_price}:1:$item->{asin}:$addCpv->{$color};$addCpv->{$size};";
+
+		$t_num++;
+	}
+
+	#t_skuProps
+	$self->setByName('t_skuProps',$skuProps);
+
+	#t_input_custom_cpv
+	my $codeOnly = "";
+	my $codeValue = "";
+	for my $key (keys %{$addCpv}){
+		$codeOnly .= "$addCpv->{$key};";
+		$codeValue .= "$addCpv->{$key}:$key;";
+	}
+	$self->setByName('t_input_custom_cpv',$codeValue);
+	$self->setByName('t_num',$t_num);
+
+	#t_cateProps
+	$self->setByName('t_cateProps',reform_array($item_0->{t_cateProps}),0);
+	$self->setByName('t_cateProps',$codeOnly,1);
+
+	#t_picture
+	$self->setByName('t_picture',reform_array($item_0->{t_picture}),0);
+	
+
+	return join("\t", @{$self->{out}});
+}
 
 1;
 
