@@ -43,7 +43,7 @@ my $base_local = "/var/www/storage";
 my $pageSize = 200000;
 
 # Levis->new()->updateAsinPrice("B0151YZMDO"); 
-Levis->new()->updateAllFromCsv(); 
+Levis->new()->extraData(); 
 
 sub updateAllFromCsv{
 	my $self = shift;
@@ -106,8 +106,6 @@ sub initBasic{
 sub updatePrice {
 	my $self = shift;
 
-	$self->loadRoot();
-
 	my $items = $self->{store}->getItemsAll();
 
 	for my $item (@{$items}){
@@ -142,30 +140,34 @@ sub extraData{
 	my $itemsTree = $self->transform2Tree($items);
 
 	for my $color (keys %{$itemsTree}){
-		$itemsTree->{$color} = split_w($itemsTree->{$color});
+		for my $price (keys %{$itemsTree->{$color}}){
+			$itemsTree->{$color}->{$price} = merge_w($itemsTree->{$color}->{$price});
+		}
 		$self->genDataPack($itemsTree->{$color},$color);
 	}
 }
 
 sub genDataPack{
+
 	my $self = shift;
 	our ( $jo, $color) = @_;
 	my $prefix = "taobao-data";
 	my $color_p = Util::normalizePath($color);
 
 	# $jo_color_w->{hello} = "world";
-	for our $size_range (keys %{$jo}){
-		our $jo_size_range = $jo->{$size_range};
-		our $jo_size_1 = $jo_size_range->[0];
+	my $csv = TBCsv->new();
+	for our $price (keys %{$jo}){
+		our $jo_price = $jo->{$price};
 
-		make_path( "$prefix/$color_p/$size_range");
+		make_path( "$prefix/$color_p/$price");
 
-		for my $jo_size (@{$jo_size_range}){
+		for my $w (keys %{$jo_price}){
+			my $lines = $csv->stringify($w);
 			# $jo_size->{nihao} = "shijie";
-			next unless defined $jo_size->{imgs_local};
+			next unless defined $jo_price->{w}->{imgs_local};
 			for (my $i = 0; $i < scalar(@{$jo_size->{imgs_local}}); $i++) {
 				my $hash = md5_hex($jo_size->{imgs_remote}->[$i]);
-			    link $jo_size->{imgs_local}->[$i],"$prefix/$color_p/$size_range/$hash.tbi";
+			    link $jo_size->{imgs_local}->[$i],"$prefix/$color_p/$price/$hash.tbi";
 			    $jo_size->{imgs_local}->[$i] = "$hash";
 			}
 		}
@@ -176,7 +178,7 @@ sub genDataPack{
 
 		my $result = $template->fill_in() or die $Text::Template::ERROR;
 
-		Util::writeFile($result,"$prefix/$color_p/$size_range.csv");
+		Util::writeFile($result,"$prefix/$color_p/$price.csv");
 	}
 }
 
@@ -280,39 +282,93 @@ sub arr_count{
 	return scalar(@{$a1}) + scalar(@{$a2});
 }
 
+sub check_merge{
+	my $jo = shift;
+	my $marked = shift;
+	my $toMerge = shift;
+
+	return 0 if length($marked) > 10;
+
+	if(arr_count($jo->{$marked},$jo->{$toMerge}) <= 24){
+		return 1;
+	} else{
+		return 0;
+	}
+}
+
+# sub splitByPrice{
+# 	my $w = shift;
+# 	my $from = 0;
+# 	my $ret = [];
+# 	for (my $i=0;$i<scalar(@{$w});$++){
+# 		next if($w->[$i]->{t_price} == $w->[$from]->{t_price});
+# 		push @{$ret}, $w->[$from..$i]; 
+# 	}
+
+# 	return $ret;
+# }
+
+# sub merge_l {
+# 	my $jo = shift;
+# 	my $ls = shift;
+
+# 	my $marked = undef;
+# 	for my $l (@{$ls}){
+# 		unless(defined $marked){
+# 			$marked = $current;
+# 			next;
+# 		}
+
+# 		if(check_merge($jo,$marked,$current)){
+# 			#merge
+# 			my $newkey .= "/$current";
+# 			$jo->{$newkey} = [ @{$jo->{$marked}},@{$jo->{$current}}];
+# 			delete $jo->{$marked};
+# 			delete $jo->{$current};
+# 			$marked = $newkey;
+# 			next;
+# 		}else{
+# 			#set new $marked
+# 			$marked = $current;
+# 		}	
+# 	}
+# }
 sub merge_w{
 	my $jo = shift;
 
-	my $p = undef;
-	my $key1 = "";
-	my $key2 = "";
+	my $priceHash={};
+	my $mergePoint = undef;
 	for my $w (sort keys %{$jo}){
-		if (! defined $p){
-			$p = $w;
-			$key1 = $key2 = $w;
+		unless (defined $mergePoint) {
+			$mergePoint = $w;
 			next;
 		}
 
-		if(arr_count($jo->{$p},$jo->{$w}) <= 24){
-			#merge
-			$jo->{$p} = [ @{$jo->{$p}},@{$jo->{$w}}];
+		my $n = scalar(@{$jo->{$w}});
+		if($n > 24){
+			#split
+			my $piece = ceil($n / 24);
+			my $step = ceil($n / $piece);
+			my $i = 0;
+			for ($i = 0; $i < $piece-1; $i++) {
+				$jo->{"w_$i"} = $jo->{$w}->[$i*$step..($i+1)*$step-1];
+			}
+			$jo->{"w_$i"} = $jo->{$w}->[$i*$step..-1];
 			delete $jo->{$w};
-			#remember last key
-			$key2 = "$w";
-			next;
 		}else{
-			#change the key
-			$jo->{"$key1-$key2"} = $jo->{$p};
-			delete $jo->{$p};
-			#set new $p
-			$p = $w;
-			$key1 = $key2 = $w;
-		}	
-	}
+			
 
-	#change the key
-	$jo->{"$key1-$key2"} = $jo->{$p};
-	delete $jo->{$p};
+			if(! check_merge($jo,$mergePoint,$w)){
+				$mergePoint = $w;
+			}
+
+			my $newkey = "$mergePoint/$w";
+			$jo->{$newkey} = [ @{$jo->{$mergePoint}},@{$jo->{$w}}];
+			delete $jo->{$mergePoint};
+			delete $jo->{$w};
+			$mergePoint = $newkey;
+		}
+	}
 
 	return $jo;
 }
@@ -320,7 +376,6 @@ sub merge_w{
 sub split_w{
 	my $jo = shift;
 
-	
 	for my $wr (sort keys %{$jo}){
 		my $price_hash = {};
 		for (my $i=0;$i<scalar(@{$jo->{$wr}});$i++){
@@ -372,98 +427,21 @@ sub transform2Tree{
 
 	my $jo = {};
 	for my $item ( @{$items}){
-		my $title = $item->{title} or next;
+		my $title = $item->{t_title} or next;
 		my $color = $item->{color} or next;
 		my $size = $item->{size} or next;
+		my $price = $item->{t_price} or next;
 		my $w = $item->{w} or next;
 		my $l = $item->{l} or next;
 
-		$jo->{$color} = {} if ! defined $jo->{$color};
-		$jo->{$color}->{$w} = [] if ! defined $jo->{$color}->{$w};
+		$jo->{$color} = {} unless defined $jo->{$color};
+		$jo->{$color}->{$price} = {} unless defined $jo->{$color}->{$price};
+		$jo->{$color}->{$price}->{$w} = [] unless defined $jo->{$color}->{$price}->{$w};
 
-		push @{$jo->{$color}->{$w}}, $item;
-	}
-
-	for my $color (keys %{$jo}){
-		$jo->{$color} = merge_w($jo->{$color});
+		push @{$jo->{$color}->{$price}->{$w}}, $item;
 	}
 
 	return $jo;
-}
-
-sub restructure{
-	my $jo_asin = shift;
-
-	my $jo = {};
-	for my $asin ( keys %{$jo_asin}){
-		my $color = $jo_asin->{$asin}->[1];
-		my $size = $jo_asin->{$asin}->[0];
-
-		if(index($size,'W') < 0 or index($size,'L') < 0){
-			next;	#skip unusual size
-		}
-
-		my ($w,$l) = $size =~ m/(\d+W) x (\d+L)/;
-		next unless defined $w and defined $l;
-
-		$jo->{$color} = {} if ! defined $jo->{$color};
-		$jo->{$color}->{$w} = [] if ! defined $jo->{$color}->{$w};
-
-		my $item = {};
-		$item->{asin}=$asin;
-		$item->{color}=$color;
-		$item->{size}=$size;
-		$item->{count}=1;
-
-		push @{$jo->{$color}->{$w}}, $item;
-	}
-
-	for my $color (keys %{$jo}){
-		$jo->{$color} = merge_w($jo->{$color});
-	}
-
-	return $jo;
-}
-
-sub getNodeTextEx{
-	my $content = shift;
-	my %args = @_;
-}
-
-sub getNodeText{
-	my $content = shift;
-	my %args = @_;
-	my $nodename = $args{nodename} || die "nodename is required";
-	my $nodeid = $args{nodeid};
-	my $nodeclass = $args{nodeclass};
-	my $leading_str = $args{leading_str};
-
-	my $idxStart = 0;
-	if(defined $leading_str){
-		$idxStart = index($content,"$leading_str");
-		return undef if $idxStart < 0;
-	}
-
-	if(defined $nodeid){
-		$idxStart = index($content,"<$nodename id=\"$nodeid\"",$idxStart);
-		return undef if $idxStart < 0;
-	}else{
-		if(defined $nodeclass){
-			$idxStart = index($content,"<$nodename class=\"$nodeclass\"",$idxStart) || die "";
-			return undef if $idxStart < 0;
-		}
-	}
-
-	$idxStart = index($content,">", $idxStart);
-	return undef if $idxStart < 0;
-	$idxStart = $idxStart + 1;
-
-	my $idxEnd = index($content,"</$nodename>", $idxStart);
-	return undef if $idxEnd < 0;
-	$idxEnd = $idxEnd - 1;
-
-	my $res = substr($content, $idxStart, $idxEnd - $idxStart + 1);
-	return $res;
 }
 
 1;

@@ -59,5 +59,47 @@ sub getListPrice{
 	return $list_price;
 }
 
+
+sub getNodeTextEx{
+	my $content = shift;
+	my %args = @_;
+}
+
+sub getNodeText{
+	my $content = shift;
+	my %args = @_;
+	my $nodename = $args{nodename} || die "nodename is required";
+	my $nodeid = $args{nodeid};
+	my $nodeclass = $args{nodeclass};
+	my $leading_str = $args{leading_str};
+
+	my $idxStart = 0;
+	if(defined $leading_str){
+		$idxStart = index($content,"$leading_str");
+		return undef if $idxStart < 0;
+	}
+
+	if(defined $nodeid){
+		$idxStart = index($content,"<$nodename id=\"$nodeid\"",$idxStart);
+		return undef if $idxStart < 0;
+	}else{
+		if(defined $nodeclass){
+			$idxStart = index($content,"<$nodename class=\"$nodeclass\"",$idxStart) || die "";
+			return undef if $idxStart < 0;
+		}
+	}
+
+	$idxStart = index($content,">", $idxStart);
+	return undef if $idxStart < 0;
+	$idxStart = $idxStart + 1;
+
+	my $idxEnd = index($content,"</$nodename>", $idxStart);
+	return undef if $idxEnd < 0;
+	$idxEnd = $idxEnd - 1;
+
+	my $res = substr($content, $idxStart, $idxEnd - $idxStart + 1);
+	return $res;
+}
+
 1;
 
