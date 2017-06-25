@@ -99,7 +99,7 @@ sub initBasic{
 	my $n=0; 
 	for my $item ( @{$jo_root}){
 		print "init $item->{asin}, $item->{color}, $item->{size}\n";
-		$self->{store}->updateField($item);
+		$self->{store}->updateFieldItem($item);
 	}
 }
 
@@ -129,7 +129,7 @@ sub updateAsinPrice {
 		$item->{count} = 0;
 		$item->{err} = 1;
 		$item->{err_msg} = $ex->text;
-		$self->{store}->updateField($item);
+		$self->{store}->updateFieldItem($item);
 	}
 	
 }
@@ -262,7 +262,7 @@ sub handle_size{
 		$jo->{datetime} = Util::genTimestamp();
 
 		# $jo->{t_title} = utf8::encode($jo->{t_title});
-		$self->{store}->updateField($jo);
+		$self->{store}->updateFieldItem($jo);
 	}catch Error with{
 		my $ex = shift;
 		#$d->clearCache();

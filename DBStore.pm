@@ -73,7 +73,17 @@ sub updateFieldMulti {
 	$coll->update($filter, {'$set'=>$item},{multi=>1});
 }
 
-sub updateField {
+sub updateFieldAll {
+	my $self = shift;
+	my $item = shift;
+
+	my $coll = $self->{db}->get_collection($self->{collectionName}) 
+	or die "coll $self->{collectionName} not found";
+
+	$coll->update({}, {'$set'=>$item},{multi=>1});
+}
+
+sub updateFieldItem {
 	my $self = shift;
 	my $item = shift;
 
