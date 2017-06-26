@@ -52,6 +52,7 @@ sub updateAllFromCsv{
 
 	#delete those I dont want to update from online data
 	delete $item->{t_title};
+	delete $item->{t_inputPids};
 	delete $item->{t_inputValues};
 	# delete $item->{t_modified};
 	delete $item->{t_price};
@@ -139,8 +140,8 @@ sub extraData{
 
 	my $itemsTree = $self->transform2Tree($items);
 
-	for my $color (keys %{$itemsTree}){
-		for my $price (keys %{$itemsTree->{$color}}){
+	for my $color (sort keys %{$itemsTree}){
+		for my $price (sort keys %{$itemsTree->{$color}}){
 			$itemsTree->{$color}->{$price} = merge_w($itemsTree->{$color}->{$price});
 		}
 		$self->genDataPack($itemsTree->{$color},$color);
@@ -162,17 +163,24 @@ sub genDataPack{
 		make_path( "$prefix/$color_p/$price");
 
 		for my $w (keys %{$jo_price}){
-			my $lines = $csv->stringify($jo_price->{$w});
 			my $w_p = Util::normalizePath($w);
-			Util::writeFile($lines,"$prefix/$color_p/$price/$w.csv");
+			make_path( "$prefix/$color_p/$price/$w_p/");
 
-			# $jo_size->{nihao} = "shijie";
-			# next unless defined $jo_price->{w}->{imgs_local};
-			# for (my $i = 0; $i < scalar(@{$jo_size->{imgs_local}}); $i++) {
-			# 	my $hash = md5_hex($jo_size->{imgs_remote}->[$i]);
-			#     link $jo_size->{imgs_local}->[$i],"$prefix/$color_p/$price/$hash.tbi";
-			#     $jo_size->{imgs_local}->[$i] = "$hash";
-			# }
+			#transfer imgs_local to t_picture
+			my $item_0 = $jo_price->{$w}->[0];
+			my $t_picture = "";
+			next unless defined $item_0->{imgs_local};
+			for (my $i = 0; $i < scalar(@{$item_0->{imgs_local}}); $i++) {
+				my $hash = md5_hex($item_0->{imgs_remote}->[$i]);
+				$t_picture .= "$hash:1:$i:|;";
+			    link $item_0->{imgs_local}->[$i],"$prefix/$color_p/$price/$w_p/$hash.tbi";
+			    $item_0->{imgs_local}->[$i] = "$hash";
+			}
+			$jo_price->{$w}->[0]->{t_picture} = $t_picture;
+
+			my $lines = $csv->stringify($jo_price->{$w},$w);
+
+			Util::writeFile($lines,"$prefix/$color_p/$price/$w_p.csv");
 		}
 
 		# open F,"<:utf8",$temp_filename or die "cannot open template file $temp_filename";
@@ -252,12 +260,12 @@ sub handle_size{
 		$jo->{filename} = $filename;
 		$jo->{filename_cache} = $d->{filename_cache};
 		$jo->{title}=getTitle($content);
-		$jo->{t_title} = $self->{trans}->translate($jo->{title});
+		#$jo->{title_cn} = $self->{trans}->translate($jo->{title});
 		
 		$jo->{price}=getPrice($content);
 
-		my $rat = 7.0;
-		$jo->{t_price}=ceil($jo->{price} * $rat);
+		# my $rat = 7.0;
+		# $jo->{t_price}=ceil($jo->{price} * $rat);
 
 		$jo->{list_price}=getListPrice($content);
 		$jo->{list_price} = $jo->{price} if ! defined $jo->{list_price};
@@ -266,7 +274,6 @@ sub handle_size{
 
 		$jo->{datetime} = Util::genTimestamp();
 
-		# $jo->{t_title} = utf8::encode($jo->{t_title});
 		$self->{store}->updateFieldItem($jo);
 	}catch Error with{
 		my $ex = shift;
@@ -363,12 +370,15 @@ sub merge_w{
 
 			if(! check_merge($jo,$mergePoint,$w)){
 				$mergePoint = $w;
+				next;
 			}
 
-			my $newkey = "$mergePoint/$w";
-			$jo->{$newkey} = [ @{$jo->{$mergePoint}},@{$jo->{$w}}];
+			my $newkey = "$mergePoint";
+			$newkey .= " $w" if index($mergePoint,$w) < 0;
+			my $tmp = [ @{$jo->{$mergePoint}},@{$jo->{$w}}];	#	in case $newkey eq $mergePoint
 			delete $jo->{$mergePoint};
 			delete $jo->{$w};
+			$jo->{$newkey} = $tmp;
 			$mergePoint = $newkey;
 		}
 	}
@@ -430,12 +440,13 @@ sub transform2Tree{
 
 	my $jo = {};
 	for my $item ( @{$items}){
-		my $title = $item->{t_title} or next;
+		# my $title = $item->{title_cn} or next;
 		my $color = $item->{color} or next;
 		my $size = $item->{size} or next;
-		my $price = $item->{t_price} or next;
-		my $w = $item->{w} or next;
-		my $l = $item->{l} or next;
+		my $price = $item->{price} or next;
+		my ($w) = split(/ /, $size);
+		# my $w = $item->{w} or next;
+		# my $l = $item->{l} or next;
 
 		$jo->{$color} = {} unless defined $jo->{$color};
 		$jo->{$color}->{$price} = {} unless defined $jo->{$color}->{$price};

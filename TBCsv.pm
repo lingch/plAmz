@@ -170,6 +170,7 @@ sub setByName {
 sub stringify {
 	my $self = shift;
 	my $items = shift;
+	my $itemsKey = shift;
 
 	my @tmp = ('') x scalar(@{$TBCsv::FIELD_LIST});
 	$self->{out} = \@tmp;
@@ -178,6 +179,8 @@ sub stringify {
 	for my $key (keys %{$item_0}){
 		$self->setByName($key,$item_0->{$key});
 	}
+
+	$self->setByName('t_title',"代购 $item_0->{title_cn} $item_0->{color_cn} $itemsKey");
 
 	#t_input_custom_cpv
 	my $cg = TBCsv::PropGenerator->new('color');
@@ -195,25 +198,32 @@ sub stringify {
 		$t_num++;
 	}
 
+	$self->setByName('t_approve_status',2);
+
 	#t_skuProps
 	$self->setByName('t_skuProps',$skuProps);
 
 	#t_input_custom_cpv
 	my $codeOnly = "";
+	my $valueOnly = "";
 	my $codeValue = "";
 	for my $key (keys %{$addCpv}){
 		$codeOnly .= "$addCpv->{$key};";
+		$valueOnly .= "$key;";
 		$codeValue .= "$addCpv->{$key}:$key;";
 	}
+
+	$self->setByName('t_inputPids',$codeOnly);
+	$self->setByName('t_inputValues',$codeValue);
+
 	$self->setByName('t_input_custom_cpv',$codeValue);
 	$self->setByName('t_num',$t_num);
-
 	#t_cateProps
 	$self->setByName('t_cateProps',reform_array($item_0->{t_cateProps}),0);
 	$self->setByName('t_cateProps',$codeOnly,1);
 
 	#t_picture
-	$self->setByName('t_picture',reform_array($item_0->{t_picture}),0);
+	# $self->setByName('t_picture',reform_array($item_0->{t_picture}),0);
 	
 
 	return join("\t", @{$self->{out}});

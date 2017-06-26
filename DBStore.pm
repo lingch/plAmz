@@ -6,6 +6,14 @@ use utf8;
 use MongoDB ();
 use Data::Dumper qw(Dumper);
 
+my $BASIC_PROJ = {
+	asin=>1,
+	color=>1,
+	size=>1,
+	price=>1,
+	datetime=>1
+};
+
 sub new {
 	my $class = shift;
 	my $host= shift;
@@ -31,19 +39,6 @@ sub open {
 	$self->{client} = MongoDB::MongoClient->new(host => $host, port => $port);
 	$self->{db}   = $self->{client}->get_database( $self->{dbName}  );
 }
-
-# sub add {
-# 	my $self = shift;
-# 	my $item = shift;
-
-# 	my $collection = $self->{db}->get_collection($self->{collectionName}) 
-# 		or die "collection $self->{collectionName} not found";
-
-# 	my $res = $collection->insert_one( $item );
-# 	throw Error::Simple("insert failed") if ! $res->acknowledged;
-
-# 	return $res->inserted_id->{value};
-# }
 
 sub update {
 	my $self = shift;
@@ -93,21 +88,28 @@ sub updateFieldItem {
 	$coll->update({asin=>$item->{asin}}, {'$set'=>$item});
 }
 
+sub getItemsAllBasic {
+	my $self = shift;
+
+	return $self->getItemsFilter({},$BASIC_PROJ);
+}
+
 sub getItemsAll {
 	my $self = shift;
 
-	return $self->getItemsFilter({});
+	return $self->getItemsFilter({},{});
 }
 
 sub getItemsFilter {
 	my $self = shift;
 	my $filter = shift;
+	my $projection = shift;
 
 	my $coll = $self->{db}->get_collection($self->{collectionName}) 
 	or die "coll $self->{collectionName} not found";
 
 	my $ret = [];
-	my $cursor = $coll->find($filter)->sort({datetime=>1});
+	my $cursor = $coll->find($filter,{projection =>$projection})->sort({datetime=>1});
 	while (my $obj = $cursor->next) {
 	    push @{$ret}, $obj;
 	}
