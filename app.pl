@@ -169,7 +169,7 @@ sub genDataPack{
 			#transfer imgs_local to t_picture
 			my $item_0 = $jo_price->{$w}->[0];
 			my $t_picture = "";
-			next unless defined $item_0->{imgs_local};
+			next unless defined $item_0->{imgs_local} and scalar(@{$item_0->{imgs_local}})>0;
 			for (my $i = 0; $i < scalar(@{$item_0->{imgs_local}}); $i++) {
 				my $hash = md5_hex($item_0->{imgs_remote}->[$i]);
 				$t_picture .= "$hash:1:$i:|;";
