@@ -180,7 +180,7 @@ sub stringify {
 		$self->setByName($key,$item_0->{$key});
 	}
 
-	$self->setByName('t_title',"代购 $item_0->{title_cn} $item_0->{color_cn} $itemsKey");
+	$self->setByName('t_title',"$item_0->{title_cn} $item_0->{color_cn} $itemsKey");
 
 	#t_input_custom_cpv
 	my $cg = TBCsv::PropGenerator->new('color');

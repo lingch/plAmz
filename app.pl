@@ -21,29 +21,37 @@ use DBStore;
 use TBCsv;
 
 require "html_parser.pl";
+my $ROOT={
+	501=>'https://www.amazon.com/dp/B0018OR118',
+	505=>'https://www.amazon.com/dp/B0018OKNWM'
+};
+
+my $jo_asin;
+my $jo_img;
+my $baseRoot = "/var/www/storage";
+my $pageSize = 200000;
+
+# Levis->new()->updateAsinPrice("B0151YZMDO"); 
+Levis->new("505")->updatePrice(); 
 
 my $temp_filename = "template/data.csv";
 sub new{
 	my $class = shift;
+	my $code = shift;
 
 	my $self = bless {
 		trans=>undef,
-		store=>undef
+		store=>undef,
+		code=>$code,
+		baseLocal=>"$baseRoot/$code"
 	}, $class;
 
+	make_path("$self->{baseLocal}/");
 	$self->{trans} = Translate->new("dict.txt");
-	$self->{store} = DBStore->new("zbox-desktop",27017);
+	$self->{store} = DBStore->new("zbox-desktop",27017,"$code");
 
 	return $self;
 }
-
-my $jo_asin;
-my $jo_img;
-my $base_local = "/var/www/storage";
-my $pageSize = 200000;
-
-# Levis->new()->updateAsinPrice("B0151YZMDO"); 
-Levis->new()->extraData(); 
 
 sub updateAllFromCsv{
 	my $self = shift;
@@ -65,16 +73,18 @@ sub updateAllFromCsv{
 	$self->{store}->updateFieldMulti({},$item,{multi=>1});
 }
 
+
+
 sub loadRoot {
 	my $self = shift;
 
-	my $root_url = 'https://www.amazon.com/dp/B0018OR118';
+	my $root_url = $ROOT->{$self->{code}} or die "url for $self->{code} is not found";
 	
-	my $filename = 'root.html';
+	my $filename = "$self->{code}.html";
 	my $document = undef;
 
 	if(defined $root_url && defined $filename){
-		print "downloading root.html\n";
+		print "downloading $self->{code}.html\n";
 		$document = MyDownloader->new()->download(url=>$root_url,
 			filename=>$filename,
 			cache_dir=>".",
@@ -194,6 +204,7 @@ sub genDataPack{
 }
 
 sub downloadImgs{
+	my $self = shift;
 	my $color = shift;
 	my $path = shift;
 
@@ -213,7 +224,7 @@ sub downloadImgs{
 		
 		MyDownloader->new()->download(url=>$imgL,
 			filename=>$fullpath,
-			cache_dir=>"$base_local/cache_img",
+			cache_dir=>"$self->{baseLocal}/cache_img",
 			cache_sec=>10000000);
 
 		push @{$img_local}, $fullpath;
@@ -239,21 +250,21 @@ sub handle_size{
 	
 	my $base_url = "http://14.155.17.64:81";
 	my $path = "$color_p/$size_p";
-	make_path( "$base_local/$path/");
+	make_path( "$self->{baseLocal}/$path/");
 
 	$jo->{color_p} = $color_p;
 	$jo->{size_p} = $size_p;
 
 	print "retrieving $jo->{datetime}, $asin, $color, $jo->{size}\r\n";
 
-	my $filename = "$base_local/$path/page.html";
+	my $filename = "$self->{baseLocal}/$path/page.html";
 
 	my $suburl = "https://www.amazon.com/dp/$asin?psc=1";
 	my $d = MyDownloader->new();
 	try{
 		my $content = $d->download(url=>$suburl,
 			filename=>$filename,
-			cache_dir=>"$base_local/cache_page",
+			cache_dir=>"$self->{baseLocal}/cache_page",
 			cache_sec=>$cacheSec,
 			bytes=>$pageSize);
 		
@@ -270,7 +281,7 @@ sub handle_size{
 		$jo->{list_price}=getListPrice($content);
 		$jo->{list_price} = $jo->{price} if ! defined $jo->{list_price};
 		
-		($jo->{imgs_local},$jo->{imgs_remote}) = downloadImgs($color,"$base_local/$path");
+		($jo->{imgs_local},$jo->{imgs_remote}) = $self->downloadImgs($color,"$self->{baseLocal}/$path");
 
 		$jo->{datetime} = Util::genTimestamp();
 

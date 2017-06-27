@@ -18,12 +18,13 @@ sub new {
 	my $class = shift;
 	my $host= shift;
 	my $port = shift;
+	my $coll = shift;
 
 	my $self = bless {
 		client=>undef,
 		db=>undef,
 		dbName => 'AMZ',
-		collectionName => 'Levis'
+		collectionName => $coll
 	}, $class;
 
 	$self->open($host,$port) if defined $host and defined $port;
@@ -85,7 +86,7 @@ sub updateFieldItem {
 	my $coll = $self->{db}->get_collection($self->{collectionName}) 
 	or die "coll $self->{collectionName} not found";
 
-	$coll->update({asin=>$item->{asin}}, {'$set'=>$item});
+	$coll->update({asin=>$item->{asin}}, {'$set'=>$item},{upsert=>1});
 }
 
 sub getItemsAllBasic {
