@@ -24,7 +24,7 @@ sub new {
 		client=>undef,
 		db=>undef,
 		dbName => 'AMZ',
-		collectionName => $coll
+		collectionName => "C_$coll"
 	}, $class;
 
 	$self->open($host,$port) if defined $host and defined $port;

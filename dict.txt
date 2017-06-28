@@ -43,3 +43,27 @@ Timberwolf,卡其1
 Torn Up Destruction,破洞浅蓝
 Trashed,破洞白
 Yellow String,浅青
+Big Root - Stretch,Root蓝
+Springstein,Springstein蓝
+Navarro - Stretch,Navarro蓝
+Rock Cod - Stretch,Rock蓝
+Golden Top - Stretch,Golden浅蓝
+Green Leaf - Stretch,Leaf蓝
+Range,Range黑
+Tumbled Rigid,Tumbled黑
+Medium Chipped,Chipped淡蓝
+Kalsomine,Kalsomine浅蓝
+Shoestring,Shoestring深蓝
+Cabana,Cabana浅蓝
+Cash - Stretch,Cash青
+Lost,Lost青蓝
+Hunters Moon - Stretch,Hunters黑
+Graphite,Graphite黑
+Rooster - Stretch,Rooster蓝
+Black 37743,37743黑
+Dark Sw,Sw蓝
+Light Sw 37749,37749淡蓝
+Range Blue,Range深蓝
+Birdman - Stretch,鸟人蓝
+Brutus - Stretch,Brutus蓝
+Rooster,Rooster蓝
