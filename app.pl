@@ -121,6 +121,8 @@ sub initBasic{
 sub updatePrice {
 	my $self = shift;
 
+	$self->loadRoot();
+
 	my $items = $self->{store}->getItemsAll();
 
 	for my $item (@{$items}){
@@ -166,7 +168,7 @@ sub genDataPack{
 
 	my $self = shift;
 	our ( $jo, $color) = @_;
-	my $prefix = "taobao-data";
+	my $prefix = $self->{code};
 	my $color_p = Util::normalizePath($color);
 
 	# $jo_color_w->{hello} = "world";
@@ -183,6 +185,7 @@ sub genDataPack{
 			#transfer imgs_local to t_picture
 			my $item_0 = $jo_price->{$w}->[0];
 			my $t_picture = "";
+			#skip those no picture?
 			next unless defined $item_0->{imgs_local} and scalar(@{$item_0->{imgs_local}})>0;
 			for (my $i = 0; $i < scalar(@{$item_0->{imgs_local}}); $i++) {
 				my $hash = md5_hex($item_0->{imgs_remote}->[$i]);
