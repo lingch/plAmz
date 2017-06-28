@@ -35,6 +35,7 @@ sub download{
 	my $filename_cache = $self->{filename_cache} = "$cache_dir/$url_hash";
 
 	if(defined $cache_dir and Util::fileMTimeDelta($filename_cache) < $cache_sec){
+		link $filename_cache,$filename;
 		return Util::readFile($filename_cache);
 	}
 

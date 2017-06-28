@@ -16,7 +16,6 @@ use File::Path qw(make_path remove_tree);
 
 use Util;
 use MyDownloader;
-use Translate;
 use DBStore;
 use TBCsv;
 
@@ -44,14 +43,13 @@ sub new{
 	my $code = shift;
 
 	my $self = bless {
-		trans=>undef,
 		store=>undef,
 		code=>$code,
 		baseLocal=>"$baseRoot/$code"
 	}, $class;
 
 	make_path("$self->{baseLocal}/");
-	$self->{trans} = Translate->new("dict.txt");
+	
 	$self->{store} = DBStore->new("zbox-desktop",27017,"$code");
 
 	return $self;
@@ -136,7 +134,7 @@ sub updateAsinPrice {
 	my $item = shift;
 	
 	try{
-		$self->handle_size($item,0);
+		$self->handle_size($item,100000);
 	}catch Error with{
 		my $ex = shift;
 		print $ex->text . "\n";
@@ -249,12 +247,10 @@ sub handle_size{
 
 	my $asin = $jo->{asin};
 	my $color = $jo->{color};
-	$jo->{color_cn} = $self->{trans}->translate($jo->{color});
 
 	my $size_p =  Util::normalizePath($jo->{size});
 	my $color_p = Util::normalizePath($color);
 
-	
 	my $base_url = "http://14.155.17.64:81";
 	my $path = "$color_p/$size_p";
 	make_path( "$self->{baseLocal}/$path/");
@@ -278,7 +274,6 @@ sub handle_size{
 		$jo->{filename} = $filename;
 		$jo->{filename_cache} = $d->{filename_cache};
 		$jo->{title}=getTitle($content);
-		#$jo->{title_cn} = $self->{trans}->translate($jo->{title});
 		
 		$jo->{price}=getPrice($content);
 
@@ -291,6 +286,8 @@ sub handle_size{
 		($jo->{imgs_local},$jo->{imgs_remote}) = $self->downloadImgs($color,"$self->{baseLocal}/$path");
 
 		$jo->{datetime} = Util::genTimestamp();
+		$jo->{err} = 0;
+		$jo->{err_msg} = '';
 
 		$self->{store}->updateFieldItem($jo);
 	}catch Error with{
@@ -461,7 +458,7 @@ sub transform2Tree{
 		# my $title = $item->{title_cn} or next;
 		my $color = $item->{color} or next;
 		my $size = $item->{size} or next;
-		my $price = $item->{price} or next;
+		my $price = $item->{t_price} = ceil($item->{price} * 7.0) or next;
 		my ($w) = split(/ /, $size);
 		# my $w = $item->{w} or next;
 		# my $l = $item->{l} or next;

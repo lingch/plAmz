@@ -4,6 +4,7 @@ use TBCsv::PropGenerator;
 use strict;
 use utf8;
 
+use Translate;
 use Storable qw(dclone);
 use List::MoreUtils qw(first_index);
 
@@ -13,9 +14,12 @@ sub new {
 	my $class = shift;
 	$class = ref $class if ref $class;
 	my $self = bless {
-			out => undef
+			out => undef,
+			trans=>undef
 		}, $class;
-	$self;
+
+	$self->{trans} = Translate->new("dict.txt");
+	return $self;
 }
 
 sub parse1 {
@@ -166,6 +170,14 @@ sub setByName {
 		return $self->{out}[$idxKey] = $value ;
 	}
 }
+
+sub genTData {
+	my $self = shift;
+	my $item = shift;
+
+
+}
+
 #TODO: check the price
 sub stringify {
 	my $self = shift;
@@ -180,7 +192,8 @@ sub stringify {
 		$self->setByName($key,$item_0->{$key});
 	}
 
-	$self->setByName('t_title',"$item_0->{title_cn} $item_0->{color_cn} $itemsKey");
+	my $title_cn = $self->{trans}->translate($item_0->{title});
+	$self->setByName('t_title',"$title_cn $item_0->{color_cn} $itemsKey");
 
 	#t_input_custom_cpv
 	my $cg = TBCsv::PropGenerator->new('color');
@@ -189,7 +202,7 @@ sub stringify {
 	my $t_num = 0;
 	my $skuProps = "";
 	for my $item (@{$items}){
-		my $color = $item->{color};
+		my $color = $self->{trans}->translate($item_0->{color});
 		my $size = $item->{size};
 		$addCpv->{$color} = $cg->generate() unless defined $addCpv->{$color};
 		$addCpv->{$size} = $sg->generate() unless defined $addCpv->{$size};

@@ -1,4 +1,10 @@
 #!/bin/sh
+
+if [ $# -lt 1 ] ; then
+	echo "please input code";
+	exit 1;
+fi
+
 CODE=$1;
 
 rm -rf "$CODE-all"
