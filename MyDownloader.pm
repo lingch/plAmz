@@ -57,7 +57,7 @@ sub download{
 
 	my $resp = $ua->get($url);
 
-	Util::writeFile($resp->content,$filename);
+	Util::writeFileBin($resp->content,$filename);
 
 	if(defined $cache_dir){
 		make_path( $cache_dir) unless -e $cache_dir;

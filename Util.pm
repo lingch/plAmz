@@ -22,6 +22,15 @@ sub fileMTimeDelta{
 	return $currentTime - $mtime;
 }
 
+sub writeFileBin {
+	my $content = shift;
+	my $filename = shift;
+
+	open (MYFILE, ">", "$filename");
+	binmode MYFILE;
+	print MYFILE $content;
+	close (MYFILE); 
+}
 sub writeFile{
 	my $content = shift;
 	my $filename = shift;

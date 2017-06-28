@@ -124,6 +124,7 @@ sub updatePrice {
 	my $items = $self->{store}->getItemsAll();
 
 	for my $item (@{$items}){
+		delete $item->{_id};
 		$self->updateAsinPrice($item);
 	}
 }
@@ -448,6 +449,15 @@ sub transform2Flat{
 
 	return $jo;
 }
+
+# sub findPriceSection {
+	
+# 	for my $p (sort keys %{$jo->{$color}}){
+# 		my ($low,$high) = split(/-/,$p);
+# 		$high = $low if undef $high;
+# 		return $p if $price >=$low and $price < $price*1.1
+# 	}
+# }
 
 sub transform2Tree{
 	my $self = shift;
