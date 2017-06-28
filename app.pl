@@ -31,8 +31,12 @@ my $jo_img;
 my $baseRoot = "/var/www/storage";
 my $pageSize = 200000;
 
+my $cate = $ARGV[0];
+my $operate = $ARGV[1];
+
 # Levis->new()->updateAsinPrice("B0151YZMDO"); 
-Levis->new("505")->updatePrice(); 
+my $code = 'Levis'->can($operate) or die "operate $operate not found";
+Levis->new($cate)->$code(); 
 
 my $temp_filename = "template/data.csv";
 sub new{
