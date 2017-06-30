@@ -1,0 +1,49 @@
+<div >
+<style>
+.mytable { 
+	background-color: white;
+  border: 0px;
+  text-align: center;
+  }
+.mytop{
+	width: 100%;
+}
+.imgCell{
+	width: 16.6%;
+	/*height: 20%;*/
+}
+.img{
+	display: block;
+	width: 100%;
+	height: auto;
+}
+.nameCell{
+	width: 16.6%;
+	font: arial;
+	font-size: xx-large;
+}
+</style>
+<table class="mytable">
+<tbody>
+<tr class="mytop">
+<td colspan="6"><img src="maintop.jpg" alt="" /></td>
+</tr>
+<tr>
+<td class="imgCell"><img class="img" src="{$items->[0]->{imgs_local}->[0]}" /></td>
+<td class="imgCell"><img class="img" src="{$items->[1]->{imgs_local}->[0]}" /></td>
+<td class="imgCell"><img class="img" src="{$items->[2]->{imgs_local}->[0]}" /></td>
+<td class="imgCell"><img class="img" src="{$items->[3]->{imgs_local}->[0]}" /></td>
+<td class="imgCell"><img class="img" src="{$items->[4]->{imgs_local}->[0]}" /></td>
+<td class="imgCell"><img class="img" src="{$items->[5]->{imgs_local}->[0]}" /></td>
+</tr>
+<tr>
+<td class="nameCell">{$items->[0]->{color}}</td>
+<td class="nameCell">{$items->[1]->{color}}</td>
+<td class="nameCell">{$items->[2]->{color}}</td>
+<td class="nameCell">{$items->[3]->{color}}</td>
+<td class="nameCell">{$items->[4]->{color}}</td>
+<td class="nameCell">{$items->[5]->{color}}</td>
+</tr>
+</tbody>
+</table>
+</div>
