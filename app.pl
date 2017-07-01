@@ -8,6 +8,7 @@ use JSON::Parse 'parse_json';
 use Error qw(:try);
 
 use Digest::MD5 qw(md5_hex);
+use List::Util qw(reduce);
 use Text::Template;
 use POSIX;
 use utf8;
@@ -110,6 +111,12 @@ sub initBasic{
 
 	our $jo_root = transform2Flat($jo_asin);
 
+	my $defContent = Util::readFile("tbDefault.json") 
+	or die "taobao default value file not found";
+
+	my $defJson = parse_json($defContent) or die "failed to parse taobao default content";
+	$self->{store}->updateFieldAll($defJson);
+
 	my $n=0; 
 	for my $item ( @{$jo_root}){
 		print "init $item->{asin}, $item->{color}, $item->{size}\n";
@@ -136,7 +143,7 @@ sub updateAsinPrice {
 	my $item = shift;
 	
 	try{
-		$self->handle_size($item,100000);
+		$self->handle_size($item,1000000);
 	}catch Error with{
 		my $ex = shift;
 		print $ex->text . "\n";
@@ -149,19 +156,61 @@ sub updateAsinPrice {
 	
 }
 
+sub getMinL {
+	my $item = shift;
+
+	my $minLItem = undef;
+	for my $w (keys %{$item}){
+		$minLItem = reduce {$a->{l} lt $b->{l} ? $a : $b } $item->{$w};
+	}
+
+	return $minLItem ? $minLItem->{l} : undef;
+}
+
+sub genPriceMatrix {
+	my $item = shift;
+
+	my $wc = scalar(keys %{$item});
+	my $table = "<table><tbody>";
+	while (my $minL = getMinL($item)) {
+		my $tds = "<tr>"
+		for my $w (keys %{$item}){
+			my $l0 = $item->{$w}->[0]->{l};
+			my $price0 =  '-';
+			if($l0 eq $minL){
+				price0 = $item->{$w}->[0]->{t_price};
+				shift @{$item->{$w}};
+			}
+
+			sprintf ($tds,"<td>%s</td>", $price0);
+			$tds .= $tds;
+		}
+		$tds .= "</tr>";
+	}
+	$table .= "</tbody></table>";
+	return $table;
+}
+
 sub extraData{
 	my $self = shift;
 
 	my $items = $self->{store}->getItemsAll();
 
+	#sort L array
 	my $itemsTree = $self->transform2Tree($items);
+	for my $color (keys $itemsTree){
+		for my $w (keys $itemsTree->{$color}){
+			$itemsTree->{$color}->{$w} = sort {$a->{l} <=> $b->{l}} $itemsTree->{$color}->{$w};
+		}
+	}
 
-	# for my $color (sort keys %{$itemsTree}){
-	# 	for my $price (sort keys %{$itemsTree->{$color}}){
-	# 		$itemsTree->{$color}->{$price} = merge_w($itemsTree->{$color}->{$price});
-	# 	}
-	# 	$self->genDataPack($itemsTree->{$color},$color);
-	# }
+	my $mainPicItems = [];
+	for my $color (sort keys %{$itemsTree}){
+		# push $mainPicItems,(values $itemsTree->{$color})[0];
+		my $table = genPriceMatrix($itemsTree->{$color});
+
+		# $self->genDataPack($itemsTree->{$color},$color);
+	}
 }
 
 sub genDataPack{
@@ -493,20 +542,28 @@ sub transform2Tree{
 	my $items = shift;
 
 	my $jo = {};
+	my $colorItemCount = {};
 	for my $item ( @{$items}){
 		# my $title = $item->{title_cn} or next;
 		my $color = $item->{color} or next;
 		my $size = $item->{size} or next;
 		my $price = $item->{t_price} = ceil($item->{price} * 7.0) or next;
-		my ($w) = split(/ /, $size);
-		# my $w = $item->{w} or next;
-		# my $l = $item->{l} or next;
+		my ($w,$l) = split(/ /, $size);
+		$item->{w} = $w or next;
+		$item->{l} = $l or next;
 
 		$jo->{$color} = {} unless defined $jo->{$color};
-		$jo->{$color}->{$price} = {} unless defined $jo->{$color}->{$price};
-		$jo->{$color}->{$price}->{$w} = [] unless defined $jo->{$color}->{$price}->{$w};
+		$colorItemCount->{$color} = 0 unless defined $colorItemCount->{$color};
+		$jo->{$color}->{$w} = [] unless defined $jo->{$color}->{$w};
+
+		$colorItemCount->{$color} += 1;
 
 		push @{$jo->{$color}->{$price}->{$w}}, $item;
+	}
+
+	#remove those less then 4 size option
+	for my $color (keys %{$colorItemCount}){
+		delete $jo->{$color} if $colorItemCount->{$color} < 4;
 	}
 
 	return $jo;
