@@ -161,7 +161,8 @@ sub getMinL {
 
 	my $minLItem = undef;
 	for my $w (keys %{$item}){
-		$minLItem = reduce {$a->{l} lt $b->{l} ? $a : $b } $item->{$w};
+		my $tmp = reduce {$a->{l} lt $b->{l} ? $a : $b } @{$item->{$w}};
+		$minLItem = $tmp if !defined $minLItem or $tmp->{l} lt $minLItem->{l};
 	}
 
 	return $minLItem ? $minLItem->{l} : undef;
@@ -171,21 +172,24 @@ sub genPriceMatrix {
 	my $item = shift;
 
 	my $wc = scalar(keys %{$item});
-	my $table = "<table><tbody>";
-	while (my $minL = getMinL($item)) {
-		my $tds = "<tr>"
-		for my $w (keys %{$item}){
+	my $table = "<table class=\"priceTable\"><tbody>\n";
+	my $minL = undef;
+	#first line
+	$table = $table . "<tr><td></td><td>" . join('W</td><td>',sort keys %{$item}) . "</td></tr>";
+	while ($minL = getMinL($item)) {
+		my $tds = "<tr><td>".$minL."L</td>"; #first column
+		my $w = undef;
+		for $w (sort keys %{$item}){
 			my $l0 = $item->{$w}->[0]->{l};
 			my $price0 =  '-';
-			if($l0 eq $minL){
-				price0 = $item->{$w}->[0]->{t_price};
+			if($l0 == $minL){
+				$price0 = "￥$item->{$w}->[0]->{t_price}";
 				shift @{$item->{$w}};
 			}
-
-			sprintf ($tds,"<td>%s</td>", $price0);
-			$tds .= $tds;
+			$tds .= "<td>$price0</td>";
 		}
-		$tds .= "</tr>";
+		$tds .= "</tr>\n";
+		$table .= $tds;
 	}
 	$table .= "</tbody></table>";
 	return $table;
@@ -198,18 +202,31 @@ sub extraData{
 
 	#sort L array
 	my $itemsTree = $self->transform2Tree($items);
-	for my $color (keys $itemsTree){
-		for my $w (keys $itemsTree->{$color}){
-			$itemsTree->{$color}->{$w} = sort {$a->{l} <=> $b->{l}} $itemsTree->{$color}->{$w};
+	for my $color (keys %{$itemsTree}){
+		for my $w (keys %{$itemsTree->{$color}}){
+			my @tmp = sort {$a->{l} <=> $b->{l}} @{$itemsTree->{$color}->{$w}};
+			$itemsTree->{$color}->{$w} = \@tmp;
+			1;
 		}
 	}
 
 	my $mainPicItems = [];
 	for my $color (sort keys %{$itemsTree}){
-		# push $mainPicItems,(values $itemsTree->{$color})[0];
-		my $table = genPriceMatrix($itemsTree->{$color});
+		my $item0 = (values %{$itemsTree->{$color}})[0]->[0];
+		our $colorImg = $item0->{imgs_local}->[0];
+		our $table = genPriceMatrix($itemsTree->{$color});
 
+		my $outFilename = "a.html";
+		open F,"<:utf8","template/detailpic1.html" or die "cannot open template file";
+		try{
+			my $template = Text::Template->new(DELIMITERS => [ '{=', '=}' ],TYPE => 'FILEHANDLE', SOURCE=> \*F);
+			my $result = $template->fill_in() or die $Text::Template::ERROR;
+			Util::writeFile($result,$outFilename);
+			}finally {
+				close F;
+			};
 		# $self->genDataPack($itemsTree->{$color},$color);
+		last;
 	}
 }
 
@@ -483,7 +500,7 @@ sub transform2Flat{
 		my $color = $jo_asin->{$asin}->[1];
 		my $size = $jo_asin->{$asin}->[0];
 
-		my ($w,$l) = $size =~ m/(\d+W) x (\d+L)/;
+		my ($w,$l) = $size =~ m/(\d+)W x (\d+)L/;
 		next unless defined $w and defined $l;
 
 		my $item = {};
@@ -548,17 +565,17 @@ sub transform2Tree{
 		my $color = $item->{color} or next;
 		my $size = $item->{size} or next;
 		my $price = $item->{t_price} = ceil($item->{price} * 7.0) or next;
-		my ($w,$l) = split(/ /, $size);
+		my ($w,$l) = $size =~ m/(\d+)W x (\d+)L/;
 		$item->{w} = $w or next;
 		$item->{l} = $l or next;
 
-		$jo->{$color} = {} unless defined $jo->{$color};
-		$colorItemCount->{$color} = 0 unless defined $colorItemCount->{$color};
-		$jo->{$color}->{$w} = [] unless defined $jo->{$color}->{$w};
+		# $jo->{$color} = {} unless defined $jo->{$color};
+		# $colorItemCount->{$color} = 0 unless defined $colorItemCount->{$color};
+		# $jo->{$color}->{$w} = [] unless defined $jo->{$color}->{$w};
 
 		$colorItemCount->{$color} += 1;
 
-		push @{$jo->{$color}->{$price}->{$w}}, $item;
+		push @{$jo->{$color}->{$w}}, $item;
 	}
 
 	#remove those less then 4 size option
