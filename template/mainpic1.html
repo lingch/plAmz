@@ -9,7 +9,7 @@
 	width: 100%;
 }
 .imgCell{
-	width: {= ceil(100/scalar(@{$items})) =}%;
+	width: {= ceil(100/scalar(@{$mainPicItems})) =}%;
 	/*height: 20%;*/
 }
 .img{
@@ -18,7 +18,7 @@
 	height: auto;
 }
 .nameCell{
-	width: {= ceil(100/scalar(@{$items})) =}%;
+	width: {= ceil(100/scalar(@{$mainPicItems})) =}%;
 	font: arial;
 	font-size: xx-large;
 }
@@ -26,18 +26,18 @@
 <table class="mytable">
 <tbody>
 <tr class="mytop">
-<td colspan="{=scalar(@{$items})=}"><img src="{=$topImg=}" alt="" /></td>
+<td colspan="{=scalar(@{$mainPicItems})=}"><img src="{=$topImg=}" alt="" /></td>
 </tr>
 <tr>
 {=
-for my $item(@{$items}){
-	$OUT.="<td class=\"imgCell\"><img class=\"img\" src=\"$item->{imgs_local}->[0]\" /></td>";
+for my $item(@{$mainPicItems}){
+	$OUT.="<td class=\"imgCell\"><img class=\"img\" src=\"$item\" /></td>";
 }
 =}
 </tr>
 <tr>
 {=
-for my $item(@{$items}){
+for my $item(@{$mainPicItems}){
 	$OUT.="<td class=\"nameCell\">$item->{color}</td>";
 }
 =}

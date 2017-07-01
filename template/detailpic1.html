@@ -12,6 +12,8 @@
   }
 .priceTable td, .priceTable tr {
   border: 1px dotted black;
+  	font: arial;
+	font-size: 12px;
 }
 .myDetail{
 	width: 100%;
@@ -25,17 +27,12 @@
 	width: 100%;
 	height: auto;
 }
-.nameCell{
-	font: arial;
-	font-size: xx-large;
-}
 </style>
 <table class="mytable">
 <tbody>
-<tr class="myDetail">
-<td class="imgCell"><img class="img" src="{=$colorImg=}"/></td>
-<td class="nameCell">{=$table=}</td>
-</tr>
+{=
+	$OUT.=$detailRows;
+=}
 </tbody>
 </table>
 </div>

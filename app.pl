@@ -9,17 +9,17 @@ use Error qw(:try);
 
 use Digest::MD5 qw(md5_hex);
 use List::Util qw(reduce);
-use Text::Template;
+
 use POSIX;
 use utf8;
 
 use File::Path qw(make_path remove_tree);
-use File::Spec;
 
 use Util;
 use MyDownloader;
 use DBStore;
 use TBCsv;
+use Out::Group;
 
 require "html_parser.pl";
 my $ROOT={
@@ -156,79 +156,12 @@ sub updateAsinPrice {
 	
 }
 
-sub getMinL {
-	my $item = shift;
-
-	my $minLItem = undef;
-	for my $w (keys %{$item}){
-		my $tmp = reduce {$a->{l} lt $b->{l} ? $a : $b } @{$item->{$w}};
-		$minLItem = $tmp if !defined $minLItem or $tmp->{l} lt $minLItem->{l};
-	}
-
-	return $minLItem ? $minLItem->{l} : undef;
-}
-
-sub genPriceMatrix {
-	my $item = shift;
-
-	my $wc = scalar(keys %{$item});
-	my $table = "<table class=\"priceTable\"><tbody>\n";
-	my $minL = undef;
-	#first line
-	$table = $table . "<tr><td></td><td>" . join('W</td><td>',sort keys %{$item}) . "</td></tr>";
-	while ($minL = getMinL($item)) {
-		my $tds = "<tr><td>".$minL."L</td>"; #first column
-		my $w = undef;
-		for $w (sort keys %{$item}){
-			my $l0 = $item->{$w}->[0]->{l};
-			my $price0 =  '-';
-			if($l0 == $minL){
-				$price0 = "￥$item->{$w}->[0]->{t_price}";
-				shift @{$item->{$w}};
-			}
-			$tds .= "<td>$price0</td>";
-		}
-		$tds .= "</tr>\n";
-		$table .= $tds;
-	}
-	$table .= "</tbody></table>";
-	return $table;
-}
-
-sub fillTemplate {
-
-	my $tempfilename = shift;
-	my $outfilename = shift;
-	open F,"<:utf8","$tempfilename" or die "cannot open template file $tempfilename";
-	try{
-		my $template = Text::Template->new(DELIMITERS => [ '{=', '=}' ],TYPE => 'FILEHANDLE', SOURCE=> \*F);
-		my $result = $template->fill_in() or die $Text::Template::ERROR;
-		Util::writeFile($result,$outfilename);
-		}finally {
-			close F;
-		};
-}
-
 sub extraData{
 	my $self = shift;
+	my $out = Out::Group->new($self->{code});
 
 	my $items = $self->{store}->getItemsAll();
-
-	#sort L array
-	my $itemsTree = $self->transform2Tree($items);
-	for my $color (keys %{$itemsTree}){
-		for my $w (keys %{$itemsTree->{$color}}){
-			my @tmp = sort {$a->{l} <=> $b->{l}} @{$itemsTree->{$color}->{$w}};
-			$itemsTree->{$color}->{$w} = \@tmp;
-			1;
-		}
-	}
-
-	my $mainPicItems = [];
-	for my $color (sort keys %{$itemsTree}){
-		$self->genDataPack($itemsTree->{$color},$color);
-		last;
-	}
+	$out->extra($items);
 }
 
 sub genDataPack{
@@ -237,13 +170,6 @@ sub genDataPack{
 	our ( $jo, $color) = @_;
 	my $prefix = $self->{code};
 	my $color_p = Util::normalizePath($color);
-
-	my $item0 = (values %{$jo})[0]->[0];
-	our $colorImg = $item0->{imgs_local}->[0];
-	our $table = genPriceMatrix($itemsTree->{$color});
-
-	my $outFilename = "a.html";
-	fillTemplate("template/detailpic1.html","a.html");
 
 	# $jo_color_w->{hello} = "world";
 	my $csv = TBCsv->new();
@@ -517,60 +443,6 @@ sub transform2Flat{
 	return $jo;
 }
 
-sub genMainPic {
-	my $self = shift;
-
-	my $prefix = $self->{code};
-	my $temp_filename = "template/mainpic1.html";
-	my $jcontent = Util::readFile("groups.json");
-	my $groups = parse_json ($jcontent);
-	for my $group (@{$groups}){
-		our $topImg = File::Spec->rel2abs("template/top1.jpg");
-		our $items = [];
-		for my $color( @{$group->{colors}}){
-			my $item = $self->{store}->findColorItem($color);
-			push @{$items}, $item;
-		}
-
-		my $colorsName = Util::normalizePath(join('-',@{$group->{colors}})) ;
-		my $outHtmlFilename = "$prefix/$colorsName.html";
-		my $outPngFilename = "$prefix/$colorsName.png";
-		fillTemplate($temp_filename,$outHtmlFilename);
-		system("captureScreen.sh $outHtmlFilename $outPngFilename");
-	}
-}
-
-sub transform2Tree{
-	my $self = shift;
-	my $items = shift;
-
-	my $jo = {};
-	my $colorItemCount = {};
-	for my $item ( @{$items}){
-		# my $title = $item->{title_cn} or next;
-		my $color = $item->{color} or next;
-		my $size = $item->{size} or next;
-		my $price = $item->{t_price} = ceil($item->{price} * 7.0) or next;
-		my ($w,$l) = $size =~ m/(\d+)W x (\d+)L/;
-		$item->{w} = $w or next;
-		$item->{l} = $l or next;
-
-		# $jo->{$color} = {} unless defined $jo->{$color};
-		# $colorItemCount->{$color} = 0 unless defined $colorItemCount->{$color};
-		# $jo->{$color}->{$w} = [] unless defined $jo->{$color}->{$w};
-
-		$colorItemCount->{$color} += 1;
-
-		push @{$jo->{$color}->{$w}}, $item;
-	}
-
-	#remove those less then 4 size option
-	for my $color (keys %{$colorItemCount}){
-		delete $jo->{$color} if $colorItemCount->{$color} < 4;
-	}
-
-	return $jo;
-}
 
 1;
 
