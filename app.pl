@@ -195,6 +195,20 @@ sub genPriceMatrix {
 	return $table;
 }
 
+sub fillTemplate {
+
+	my $tempfilename = shift;
+	my $outfilename = shift;
+	open F,"<:utf8","$tempfilename" or die "cannot open template file $tempfilename";
+	try{
+		my $template = Text::Template->new(DELIMITERS => [ '{=', '=}' ],TYPE => 'FILEHANDLE', SOURCE=> \*F);
+		my $result = $template->fill_in() or die $Text::Template::ERROR;
+		Util::writeFile($result,$outfilename);
+		}finally {
+			close F;
+		};
+}
+
 sub extraData{
 	my $self = shift;
 
@@ -212,20 +226,7 @@ sub extraData{
 
 	my $mainPicItems = [];
 	for my $color (sort keys %{$itemsTree}){
-		my $item0 = (values %{$itemsTree->{$color}})[0]->[0];
-		our $colorImg = $item0->{imgs_local}->[0];
-		our $table = genPriceMatrix($itemsTree->{$color});
-
-		my $outFilename = "a.html";
-		open F,"<:utf8","template/detailpic1.html" or die "cannot open template file";
-		try{
-			my $template = Text::Template->new(DELIMITERS => [ '{=', '=}' ],TYPE => 'FILEHANDLE', SOURCE=> \*F);
-			my $result = $template->fill_in() or die $Text::Template::ERROR;
-			Util::writeFile($result,$outFilename);
-			}finally {
-				close F;
-			};
-		# $self->genDataPack($itemsTree->{$color},$color);
+		$self->genDataPack($itemsTree->{$color},$color);
 		last;
 	}
 }
@@ -236,6 +237,13 @@ sub genDataPack{
 	our ( $jo, $color) = @_;
 	my $prefix = $self->{code};
 	my $color_p = Util::normalizePath($color);
+
+	my $item0 = (values %{$jo})[0]->[0];
+	our $colorImg = $item0->{imgs_local}->[0];
+	our $table = genPriceMatrix($itemsTree->{$color});
+
+	my $outFilename = "a.html";
+	fillTemplate("template/detailpic1.html","a.html");
 
 	# $jo_color_w->{hello} = "world";
 	my $csv = TBCsv->new();
@@ -265,14 +273,6 @@ sub genDataPack{
 
 			Util::writeFile($lines,"$prefix/$color_p/$price/$w_p.csv");
 		}
-
-		# open F,"<:utf8",$temp_filename or die "cannot open template file $temp_filename";
-		# my $template = Text::Template->new(TYPE => 'FILEHANDLE', SOURCE=> \*F)
-		# 	or die "Couldn't construct template: $Text::Template::ERROR";
-
-		# my $result = $template->fill_in() or die $Text::Template::ERROR;
-
-		# Util::writeFile($result,"$prefix/$color_p/$price.csv");
 	}
 }
 
@@ -517,20 +517,6 @@ sub transform2Flat{
 	return $jo;
 }
 
-sub genMainPicGroup {
-
-	my $outFilename = shift;
-
-	open F,"<:utf8","template/mainpic1.html" or die "cannot open template file $temp_filename";
-	try{
-		my $template = Text::Template->new(DELIMITERS => [ '{=', '=}' ],TYPE => 'FILEHANDLE', SOURCE=> \*F);
-		my $result = $template->fill_in() or die $Text::Template::ERROR;
-		Util::writeFile($result,$outFilename);
-		}finally {
-			close F;
-		};
-	
-}
 sub genMainPic {
 	my $self = shift;
 
@@ -549,7 +535,7 @@ sub genMainPic {
 		my $colorsName = Util::normalizePath(join('-',@{$group->{colors}})) ;
 		my $outHtmlFilename = "$prefix/$colorsName.html";
 		my $outPngFilename = "$prefix/$colorsName.png";
-		genMainPicGroup($outHtmlFilename);
+		fillTemplate($temp_filename,$outHtmlFilename);
 		system("captureScreen.sh $outHtmlFilename $outPngFilename");
 	}
 }
