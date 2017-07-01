@@ -13,6 +13,7 @@ use POSIX;
 use utf8;
 
 use File::Path qw(make_path remove_tree);
+use File::Spec;
 
 use Util;
 use MyDownloader;
@@ -155,12 +156,12 @@ sub extraData{
 
 	my $itemsTree = $self->transform2Tree($items);
 
-	for my $color (sort keys %{$itemsTree}){
-		for my $price (sort keys %{$itemsTree->{$color}}){
-			$itemsTree->{$color}->{$price} = merge_w($itemsTree->{$color}->{$price});
-		}
-		$self->genDataPack($itemsTree->{$color},$color);
-	}
+	# for my $color (sort keys %{$itemsTree}){
+	# 	for my $price (sort keys %{$itemsTree->{$color}}){
+	# 		$itemsTree->{$color}->{$price} = merge_w($itemsTree->{$color}->{$price});
+	# 	}
+	# 	$self->genDataPack($itemsTree->{$color},$color);
+	# }
 }
 
 sub genDataPack{
@@ -450,14 +451,42 @@ sub transform2Flat{
 	return $jo;
 }
 
-# sub findPriceSection {
+sub genMainPicGroup {
+
+	my $outFilename = shift;
+
+	open F,"<:utf8","template/mainpic1.html" or die "cannot open template file $temp_filename";
+	try{
+		my $template = Text::Template->new(DELIMITERS => [ '{=', '=}' ],TYPE => 'FILEHANDLE', SOURCE=> \*F);
+		my $result = $template->fill_in() or die $Text::Template::ERROR;
+		Util::writeFile($result,$outFilename);
+		}finally {
+			close F;
+		};
 	
-# 	for my $p (sort keys %{$jo->{$color}}){
-# 		my ($low,$high) = split(/-/,$p);
-# 		$high = $low if undef $high;
-# 		return $p if $price >=$low and $price < $price*1.1
-# 	}
-# }
+}
+sub genMainPic {
+	my $self = shift;
+
+	my $prefix = $self->{code};
+	my $temp_filename = "template/mainpic1.html";
+	my $jcontent = Util::readFile("groups.json");
+	my $groups = parse_json ($jcontent);
+	for my $group (@{$groups}){
+		our $topImg = File::Spec->rel2abs("template/top1.jpg");
+		our $items = [];
+		for my $color( @{$group->{colors}}){
+			my $item = $self->{store}->findColorItem($color);
+			push @{$items}, $item;
+		}
+
+		my $colorsName = Util::normalizePath(join('-',@{$group->{colors}})) ;
+		my $outHtmlFilename = "$prefix/$colorsName.html";
+		my $outPngFilename = "$prefix/$colorsName.png";
+		genMainPicGroup($outHtmlFilename);
+		system("captureScreen.sh $outHtmlFilename $outPngFilename");
+	}
+}
 
 sub transform2Tree{
 	my $self = shift;

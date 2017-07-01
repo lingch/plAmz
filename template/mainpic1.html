@@ -9,7 +9,7 @@
 	width: 100%;
 }
 .imgCell{
-	width: 16.6%;
+	width: {= ceil(100/scalar(@{$items})) =}%;
 	/*height: 20%;*/
 }
 .img{
@@ -18,7 +18,7 @@
 	height: auto;
 }
 .nameCell{
-	width: 16.6%;
+	width: {= ceil(100/scalar(@{$items})) =}%;
 	font: arial;
 	font-size: xx-large;
 }
@@ -26,24 +26,23 @@
 <table class="mytable">
 <tbody>
 <tr class="mytop">
-<td colspan="6"><img src="maintop.jpg" alt="" /></td>
+<td colspan="{=scalar(@{$items})=}"><img src="{=$topImg=}" alt="" /></td>
 </tr>
 <tr>
-<td class="imgCell"><img class="img" src="{$items->[0]->{imgs_local}->[0]}" /></td>
-<td class="imgCell"><img class="img" src="{$items->[1]->{imgs_local}->[0]}" /></td>
-<td class="imgCell"><img class="img" src="{$items->[2]->{imgs_local}->[0]}" /></td>
-<td class="imgCell"><img class="img" src="{$items->[3]->{imgs_local}->[0]}" /></td>
-<td class="imgCell"><img class="img" src="{$items->[4]->{imgs_local}->[0]}" /></td>
-<td class="imgCell"><img class="img" src="{$items->[5]->{imgs_local}->[0]}" /></td>
+{=
+for my $item(@{$items}){
+	$OUT.="<td class=\"imgCell\"><img class=\"img\" src=\"$item->{imgs_local}->[0]\" /></td>";
+}
+=}
 </tr>
 <tr>
-<td class="nameCell">{$items->[0]->{color}}</td>
-<td class="nameCell">{$items->[1]->{color}}</td>
-<td class="nameCell">{$items->[2]->{color}}</td>
-<td class="nameCell">{$items->[3]->{color}}</td>
-<td class="nameCell">{$items->[4]->{color}}</td>
-<td class="nameCell">{$items->[5]->{color}}</td>
+{=
+for my $item(@{$items}){
+	$OUT.="<td class=\"nameCell\">$item->{color}</td>";
+}
+=}
 </tr>
 </tbody>
 </table>
 </div>
+

@@ -118,6 +118,19 @@ sub getItemsFilter {
 	return $ret;
 }
 
+sub findColorItem {
+	my $self = shift;
+	my $color = shift;
+
+	my $coll = $self->{db}->get_collection($self->{collectionName}) 
+	or die "coll $self->{collectionName} not found";
+
+	my $cursor = $coll->find({color=>$color},{})->sort({datetime=>-1})->limit(1);
+	my $obj = $cursor->next or die "$color not found";
+
+	return $obj;
+}
+
 1;
 
 __END__
