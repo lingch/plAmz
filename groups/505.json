@@ -1,0 +1,47 @@
+{
+	"A1" : {
+		"t_title": "李维斯Levis男505牛仔裤第1组",
+		"t_seller_cids": "",
+	    "colors" : {
+	    	"Cabana":{}, 
+	    	"Black":{}, 
+	    	"Kalsomine":{},
+	    	"Range":{}
+	    }
+	},
+
+	"2":{
+		"t_title": "李维斯Levis男505牛仔裤第2组",
+		"t_seller_cids": "",
+	    "colors" : {
+	    	"Rigid":{},
+	    	"Rinse":{},
+	    	"Big Root - Stretch":{},
+	    	"Green Leaf - Stretch":{}
+	    }
+	},
+
+	"3":{
+		"t_title": "李维斯Levis男505牛仔裤第3组",
+		"t_seller_cids": "",
+	    "colors" : {
+	    	"Hunters Moon - Stretch":{},
+	    	"Cash - Stretch":{},
+	    	"Navarro - Stretch":{},
+	    	"Rock Cod - Stretch":{}
+	    }
+	},
+
+	"4":{
+		"t_title": "李维斯Levis男505牛仔裤第4组",
+		"t_seller_cids": "",
+	    "colors" : {
+	    	"Light Stonewash":{},
+	    	"Medium Stonewash":{},
+	    	"Dark Stonewash":{},
+	    	"Graphite":{},
+	    	"Lost":{}
+	    }
+	}
+
+}

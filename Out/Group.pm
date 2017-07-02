@@ -81,7 +81,7 @@ sub engineOutput {
 	my $filenameImg = "$self->{code}/" . Util::normalizePath("$tag-$colors.png");
 	mkdir "$self->{code}";
 	Util::writeFileUtf8($content, "$filenameHtml");
-	system("captureScreen.sh $filenameHtml $filenameImg");
+	system("captureScreen.sh $filenameHtml $filenameImg") unless -e $filenameImg;
 
 	return ($filenameHtml, $filenameImg);
 }
@@ -97,16 +97,7 @@ sub sortL {
 
 	return $colorItem;
 }
-sub findLowestPrice {
-	my $colorItem = shift;
-	my $lowPriceItem = undef;
-	for my $w (%{$colorItem}){
-		my $ls = $colorItem->{$w};
-		my $tmp = reduce {$a->{t_price} lt $b->{t_price} ? $a : $b } @{$ls};
-		$lowPriceItem = $tmp if !defined $lowPriceItem or $tmp->{t_price} < $lowPriceItem->{t_price};
-	}
-	return $lowPriceItem->{t_price};
-}
+
 sub extraGroupMainPic {
 	my $self = shift;
 	my $groupItem = shift;
@@ -138,7 +129,7 @@ sub extraGroupDetailPic {
 	for our $color (sort keys %{$groupItem->{colors}}){
 		try{
 			$groupItem->{$color} = sortL($groupItem->{$color});
-			# findLowestPrice($groupItem->{$color})
+
 			my $item0 = (values %{$groupItem->{$color}})[0]->[0];
 			our $colorImg = $item0->{imgs_local}->[0];
 			our $table = genPriceMatrix($groupItem->{$color});	#for detail picture
@@ -155,6 +146,102 @@ sub extraGroupDetailPic {
 
 	my $colorStr = Util::normalizePath(join('-',@{$colors}));
 	my ($htmlFilename,$imgFilename) = $self->engineOutput($self->{engineDetail},"detail",$colorStr);
+}
+
+sub findLowestPrice {
+	my $groupitem = shift;
+
+	my $ret = {};
+	for my $color (sort keys %{$groupitem}){
+		$ret->{$color} = [];
+		for my $w (%{$colorItem}){
+			my $ls = $colorItem->{$w};
+			my $tmp = reduce {$a->{t_price} lt $b->{t_price} ? $a : $b } @{$ls};
+			if($tmp->{t_price} < $lowPriceItem->{t_price}){
+				$lowPriceItems = [];
+			}
+			push @{$lowPriceItem}, $tmp if ;
+		}
+
+
+	}
+
+	
+	return $lowPriceItem->{t_price};
+}
+
+sub extraGroupCsv {
+	my $self = shift;
+	my $groupItem = shift;
+	my $itemsKey = shift;
+
+	# my @tmp = ('') x scalar(@{$TBCsv::FIELD_LIST});
+	# $self->{out} = \@tmp;
+	# 	for my $key (keys %{$item_0}){
+	# 	$self->setByName($key,$item_0->{$key});
+	# }
+
+	my $tmp = Util::readFileJson("tbDefault.json") ;
+	# my $item0 = (values %{$groupItem->{$color}})[0]->[0];
+	# for my $field (sort keys %{$item0}){
+	# 	$item0->{$field} = $defJson->{$field} unless defined $item0->{$field};
+	# }
+
+	$tmp->{t_title} = "李维斯Levis男505牛仔裤";
+	# my $title_cn = $self->{trans}->translate($item_0->{title});
+	# $self->setByName('t_title',"$title_cn $item_0->{color_cn} $itemsKey");
+
+	#t_input_custom_cpv
+	# my $cg = TBCsv::PropGenerator->new('color');
+	# my $sg = TBCsv::PropGenerator->new('size');
+	my $colors = [];
+	my $sizes = [];
+	for my $color (sort keys %{$groupItem}){
+
+	}
+
+	my $addCpv = {};
+	my $t_num = 0;
+	my $skuProps = "";
+	for my $item (@{$items}){
+		my $color = $self->{trans}->translate($item_0->{color});
+		my $size = $item->{size};
+		$addCpv->{$color} = $cg->generate() unless defined $addCpv->{$color};
+		$addCpv->{$size} = $sg->generate() unless defined $addCpv->{$size};
+		$skuProps .= "$item->{t_price}:1:$item->{asin}:$addCpv->{$color};$addCpv->{$size};";
+
+		$t_num++;
+	}
+
+	$self->setByName('t_approve_status',2);
+
+	#t_skuProps
+	$self->setByName('t_skuProps',$skuProps);
+
+	#t_input_custom_cpv
+	my $codeOnly = "";
+	my $valueOnly = "";
+	my $codeValue = "";
+	for my $key (keys %{$addCpv}){
+		$codeOnly .= "$addCpv->{$key};";
+		$valueOnly .= "$key;";
+		$codeValue .= "$addCpv->{$key}:$key;";
+	}
+
+	$self->setByName('t_inputPids',$codeOnly);
+	$self->setByName('t_inputValues',$codeValue);
+
+	$self->setByName('t_input_custom_cpv',$codeValue);
+	$self->setByName('t_num',$t_num);
+	#t_cateProps
+	$self->setByName('t_cateProps',reform_array($item_0->{t_cateProps}),0);
+	$self->setByName('t_cateProps',$codeOnly,1);
+
+	#t_picture
+	# $self->setByName('t_picture',reform_array($item_0->{t_picture}),0);
+	
+
+	return join("\t", @{$self->{out}});
 }
 
 sub extraGroup {
