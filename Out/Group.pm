@@ -2,10 +2,15 @@ package Out::Group;
 
 use File::Spec;
 use List::Util qw(reduce);
+use JSON::Parse 'parse_json';
 use POSIX;
+
+use Error qw(:try);
 
 use Template;
 use Util;
+
+our $topImg = File::Spec->rel2abs("template/top1.jpg");
 
 sub new {
 	my $class = shift;
@@ -13,11 +18,20 @@ sub new {
 
 	$class = ref $class if ref $class;
 	my $self = bless {
-		code=>$code
+		code=>$code,
+		engineMainPic => Template->new("template/mainpic1.html"),
+		engineDetail => Template->new("template/detailpic1.html"),
+		engineDetailRow => Template->new("template/tr.html")
 		}, $class;
 
-
 	return $self;
+}
+
+sub loadGroups {
+	my $self = shift;
+	my $content = Util::readFile("groups.json");
+	my $groups = parse_json($content);
+	return $groups;
 }
 
 sub getMinL {
@@ -73,6 +87,48 @@ sub engineOutput {
 	system("captureScreen.sh $filenameHtml $filenameImg");
 }
 
+#sort L array
+sub sortL {
+	my $colorItem = shift;
+
+	for my $w (keys %{$colorItem}){
+		my @tmp = sort {$a->{l} <=> $b->{l}} @{$colorItem->{$w}};
+		$colorItem->{$w} = \@tmp;
+	}
+
+	return $colorItem;
+}
+
+sub extraGroup {
+	my $self = shift;
+	my $group = shift;
+	my $items = shift;
+
+	our $mainPicItems = [];
+	our $detailRows = "";
+	for our $color (@{$group->{colors}}){
+		try{
+			$items->{$color} = sortL($items->{$color});
+
+			my $item0 = (values %{$items->{$color}})[0]->[0];
+
+			our $colorImg = $item0->{imgs_local}->[0];	#for main picture & detail picture
+			our $table = genPriceMatrix($items->{$color});	#for detail picture
+			my $row = $self->{engineDetailRow}->fillIn(ref $self) . "\n";	#for detail picture
+			
+			push @{$mainPicItems}, $colorImg;
+			$detailRows .= $row;
+		} 
+		catch Error with {
+			my $ex = shift;
+			print "err processing $color: ".$ex->text." . \n";
+		}
+	}
+
+	my $colorStr = Util::normalizePath(join('-',@{$group->{colors}}));
+	$self->engineOutput($self->{engineMainPic},"mainPic",$colorStr);
+	$self->engineOutput($self->{engineDetail},"detail",$colorStr);
+}
 
 sub extra {
 	my $self = shift;
@@ -80,36 +136,9 @@ sub extra {
 
 	$items = $self->transform($items);
 
-	our $topImg = File::Spec->rel2abs("template/top1.jpg");
-	our $mainPicItems = [];
-	our $detailRows = "";
-	my $colorStr = "";
-	my $engineMainPic = Template->new("template/mainpic1.html");
-	my $engineDetail = Template->new("template/detailpic1.html");
-	my $engineDetailRow = Template->new("template/tr.html");
-	for my $color (sort keys %{$items}){
-
-		#sort L array
-		for my $w (keys %{$items->{$color}}){
-			my @tmp = sort {$a->{l} <=> $b->{l}} @{$items->{$color}->{$w}};
-			$items->{$color}->{$w} = \@tmp;
-		}
-
-		my $item0 = (values %{$items->{$color}})[0]->[0];
-		if(scalar(@{$mainPicItems}) < 6){
-			our $colorImg = $item0->{imgs_local}->[0];
-			our $table = genPriceMatrix($items->{$color});
-			$detailRows .= $engineDetailRow->fillIn(ref $self) . "\n";
-
-			push @{$mainPicItems}, $colorImg;
-			$colorStr .= "-$color";
-		}else{
-			$self->engineOutput($engineMainPic,"mainPic",$colorStr);
-			$self->engineOutput($engineDetail,"detail",$colorStr);
-
-			$mainPicItems = [];
-			$colorStr = "";
-		}
+	my $groups = $self->loadGroups();
+	for my $group (@{$groups}){
+		$self->extraGroup($group,$items);
 	}
 }
 

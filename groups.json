@@ -1,7 +1,37 @@
 [
-{
-    "name" : "李维斯Levis男505直筒牛仔裤 蓝色系列1",
-    "topImg":"top1.jpg",
-    "colors" : ["Big Root - Stretch", "Black", "Cabana", "Cash - Stretch", "Dark Stonewash","Golden Top - Stretch"]
-}
+	{
+	    "colors" : [
+	    	"Cabana", 
+	    	"Black", 
+	    	"Kalsomine",
+	    	"Range"
+	    ]
+	},
+	{
+	    "colors" : [
+	    	"Rigid", 
+	    	"Rinse",
+	    	"Big Root - Stretch", 
+	    	"Green Leaf - Stretch"
+	    ]
+	},
+	{
+	    "colors" : [
+	    	"Hunters Moon - Stretch", 
+	    	"Cash - Stretch", 
+	    	"Navarro - Stretch", 
+	    	"Rock Cod - Stretch"
+	    ]
+	},
+
+	{
+	    "colors" : [
+	    	"Light Stonewash", 
+	    	"Medium Stonewash",
+	    	"Dark Stonewash",
+	    	"Graphite",
+	    	"Lost"
+	    ]
+	}
+
 ]
