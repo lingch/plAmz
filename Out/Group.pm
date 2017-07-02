@@ -29,7 +29,7 @@ sub new {
 
 sub loadGroups {
 	my $self = shift;
-	my $content = Util::readFile("groups.json");
+	my $content = Util::readFileJson("groups.json");
 	my $groups = parse_json($content);
 	return $groups;
 }
@@ -83,7 +83,7 @@ sub engineOutput {
 	my $filenameHtml = "$self->{code}/" . Util::normalizePath("$tag-$colors.html");
 	my $filenameImg = "$self->{code}/" . Util::normalizePath("$tag-$colors.png");
 	mkdir "$self->{code}";
-	Util::writeFile($content, "$filenameHtml");
+	Util::writeFileUtf8($content, "$filenameHtml");
 	system("captureScreen.sh $filenameHtml $filenameImg");
 }
 

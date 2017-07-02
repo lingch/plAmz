@@ -113,10 +113,7 @@ sub initBasic{
 
 	our $jo_root = transform2Flat($jo_asin);
 
-	my $defContent = Util::readFile("tbDefault.json") 
-	or die "taobao default value file not found";
-
-	my $defJson = parse_json($defContent) or die "failed to parse taobao default content";
+	my $defJson = Util::readFileJson("tbDefault.json") ;
 	$self->{store}->updateFieldAll($defJson);
 
 	my $n=0; 

@@ -131,7 +131,7 @@ sub genDataPack{
 
 			my $lines = $csv->stringify($jo_price->{$w},$w);
 
-			Util::writeFile($lines,"$prefix/$color_p/$price/$w_p.csv");
+			Util::writeFileUtf8($lines,"$prefix/$color_p/$price/$w_p.csv");
 		}
 	}
 }

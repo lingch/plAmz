@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 package Util;
 use LWP::UserAgent;
-
+use JSON::Parse 'parse_json';
 
 sub genTimestamp{
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime;
@@ -22,30 +22,49 @@ sub fileMTimeDelta{
 	return $currentTime - $mtime;
 }
 
-sub writeFileBin {
+sub writeFile {
 	my $content = shift;
 	my $filename = shift;
+	my $mode = shift;
 
-	open (MYFILE, ">", "$filename");
-	binmode MYFILE;
+	open (MYFILE, ">$mode", "$filename");
 	print MYFILE $content;
 	close (MYFILE); 
 }
-sub writeFile{
+sub writeFileBin{
 	my $content = shift;
 	my $filename = shift;
 
-	open (MYFILE, ">:utf8", "$filename");
-	print MYFILE $content;
-	close (MYFILE); 
+	writeFile($content,$filename,":raw");
+}
+sub writeFileUtf8{
+	my $content = shift;
+	my $filename = shift;
+
+	writeFile($content,$filename,":utf8");
 }
 
 sub  readFile {
 	my $filename = shift;
-	open(FILE, $filename) or die "Cant read file $filename";
+	my $mode = shift;
+
+	open(FILE,"<$mode", $filename) or die "Cant read file $filename";
 	$document = do{local $/; <FILE>};
 	close(FILE);
 	return $document;
+}
+sub  readFileBin {
+	my $filename = shift;
+	return readFile($filename,":raw");
+}
+sub  readFileUtf8 {
+	my $filename = shift;
+	return readFile($filename,":utf8");
+}
+sub readFileJson {
+	my $filename = shift;
+	my $content = readFileUtf8($filename);
+	return parse_json($content);
 }
 
 # Perl trim function to remove whitespace from the start and end of the string

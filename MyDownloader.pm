@@ -36,7 +36,7 @@ sub download{
 
 	if(defined $cache_dir and Util::fileMTimeDelta($filename_cache) < $cache_sec){
 		link $filename_cache,$filename;
-		return Util::readFile($filename_cache);
+		return Util::readFileBin($filename_cache);
 	}
 
 	my $ua = LWP::UserAgent->new(ssl_opts=>{verify_hostname=>0});
