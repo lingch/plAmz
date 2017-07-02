@@ -7,7 +7,7 @@ use utf8;
 use Translate;
 use Storable qw(dclone);
 use List::MoreUtils qw(first_index);
-use Hash::Merge qw( merge );
+# use Hash::Merge qw( merge );
 
 require "FieldList.pm";
 

@@ -9,6 +9,7 @@ use Error qw(:try);
 
 use Template;
 use Util;
+use TBCsv;
 
 our $topImg = File::Spec->rel2abs("template/top1.jpg");
 
@@ -21,48 +22,44 @@ sub new {
 		code=>$code,
 		engineMainPic => Template->new("template/mainpic1.html"),
 		engineDetail => Template->new("template/detailpic1.html"),
-		engineDetailRow => Template->new("template/tr.html")
+		engineDetailRow => Template->new("template/tr.html"),
+		csv => TBCsv->new()
+
 		}, $class;
 
 	return $self;
 }
 
-sub loadGroups {
-	my $self = shift;
-	my $content = Util::readFileJson("groups.json");
-	my $groups = parse_json($content);
-	return $groups;
-}
-
 sub getMinL {
-	my $item = shift;
+	my $colorItem = shift;
 
 	my $minLItem = undef;
-	for my $w (keys %{$item}){
-		my $tmp = reduce {$a->{l} lt $b->{l} ? $a : $b } @{$item->{$w}};
+	for my $w (sort keys %{$colorItem}){
+		my $tmp = reduce {$a->{l} lt $b->{l} ? $a : $b } @{$colorItem->{$w}};
 		$minLItem = $tmp if !defined $minLItem or $tmp->{l} lt $minLItem->{l};
 	}
 
-	return $minLItem ? $minLItem->{l} : undef;
+	return $minLItem->{l};
 }
 
+#require color->w->l array to be sorted
 sub genPriceMatrix {
-	my $item = shift;
+	my $colorItem = shift;
 
-	my $wc = scalar(keys %{$item});
+	my $wc = scalar(keys %{$colorItem});
 	my $table = "<table class=\"priceTable\"><tbody>\n";
 	my $minL = undef;
 	#first line
-	$table = $table . "<tr><td></td><td>" . join('W</td><td>',sort keys %{$item}) . "</td></tr>";
-	while ($minL = getMinL($item)) {
+	$table = $table . "<tr><td></td><td>" . join('W</td><td>',sort keys %{$colorItem}) . "</td></tr>";
+	while ($minL = getMinL($colorItem)) {
 		my $tds = "<tr><td>".$minL."L</td>"; #first column
 		my $w = undef;
-		for $w (sort keys %{$item}){
-			my $l0 = $item->{$w}->[0]->{l};
+		for $w (sort keys %{$colorItem}){
+			my $l0 = $colorItem->{$w}->[0]->{l};
 			my $price0 =  '-';
 			if($l0 == $minL){
-				$price0 = "$item->{$w}->[0]->{t_price}";
-				shift @{$item->{$w}};
+				$price0 = "$colorItem->{$w}->[0]->{t_price}";
+				shift @{$colorItem->{$w}};
 			}
 			$tds .= "<td>$price0</td>";
 		}
@@ -85,6 +82,8 @@ sub engineOutput {
 	mkdir "$self->{code}";
 	Util::writeFileUtf8($content, "$filenameHtml");
 	system("captureScreen.sh $filenameHtml $filenameImg");
+
+	return ($filenameHtml, $filenameImg);
 }
 
 #sort L array
@@ -98,26 +97,27 @@ sub sortL {
 
 	return $colorItem;
 }
-
-sub extraGroup {
+sub findLowestPrice {
+	my $colorItem = shift;
+	my $lowPriceItem = undef;
+	for my $w (%{$colorItem}){
+		my $ls = $colorItem->{$w};
+		my $tmp = reduce {$a->{t_price} lt $b->{t_price} ? $a : $b } @{$ls};
+		$lowPriceItem = $tmp if !defined $lowPriceItem or $tmp->{t_price} < $lowPriceItem->{t_price};
+	}
+	return $lowPriceItem->{t_price};
+}
+sub extraGroupMainPic {
 	my $self = shift;
-	my $group = shift;
-	my $items = shift;
+	my $groupItem = shift;
 
-	our $mainPicItems = [];
-	our $detailRows = "";
-	for our $color (@{$group->{colors}}){
+	our $mainPicImgs = [];
+	our $mainPicColors = [];
+	for my $color (sort keys %{$groupItem->{colors}}){
 		try{
-			$items->{$color} = sortL($items->{$color});
-
-			my $item0 = (values %{$items->{$color}})[0]->[0];
-
-			our $colorImg = $item0->{imgs_local}->[0];	#for main picture & detail picture
-			our $table = genPriceMatrix($items->{$color});	#for detail picture
-			my $row = $self->{engineDetailRow}->fillIn(ref $self) . "\n";	#for detail picture
-			
-			push @{$mainPicItems}, $colorImg;
-			$detailRows .= $row;
+			my $item0 = (values %{$groupItem->{$color}})[0]->[0];
+			push @{$mainPicImgs}, $item0->{imgs_local}->[0];
+			push @{$mainPicColors},$color;
 		} 
 		catch Error with {
 			my $ex = shift;
@@ -125,9 +125,51 @@ sub extraGroup {
 		}
 	}
 
-	my $colorStr = Util::normalizePath(join('-',@{$group->{colors}}));
-	$self->engineOutput($self->{engineMainPic},"mainPic",$colorStr);
-	$self->engineOutput($self->{engineDetail},"detail",$colorStr);
+	my $colorStr = Util::normalizePath(join('-',@{$mainPicColors}));
+	return $self->engineOutput($self->{engineMainPic},"mainPic",$colorStr);
+}
+
+sub extraGroupDetailPic {
+	my $self = shift;
+	my $groupItem = shift;
+
+	our $detailRows = "";
+	my $colors = [];
+	for our $color (sort keys %{$groupItem->{colors}}){
+		try{
+			$groupItem->{$color} = sortL($groupItem->{$color});
+			# findLowestPrice($groupItem->{$color})
+			my $item0 = (values %{$groupItem->{$color}})[0]->[0];
+			our $colorImg = $item0->{imgs_local}->[0];
+			our $table = genPriceMatrix($groupItem->{$color});	#for detail picture
+			my $row = $self->{engineDetailRow}->fillIn(ref $self) . "\n";	#for detail picture
+			
+			$detailRows .= $row;
+			push @{$colors}, $color;
+		} 
+		catch Error with {
+			my $ex = shift;
+			print "err processing $color: ".$ex->text." . \n";
+		}
+	}
+
+	my $colorStr = Util::normalizePath(join('-',@{$colors}));
+	my ($htmlFilename,$imgFilename) = $self->engineOutput($self->{engineDetail},"detail",$colorStr);
+}
+
+sub extraGroup {
+	my $self = shift;
+	my $group = shift;
+	# my $items = shift;
+#t_picture
+#t_skuProps
+#t_inputPids
+#t_inputValues
+	# my $gCsv = TBCsv->new();
+	# $gCsv->setNum(1);
+
+	my ($htmlFilenameMainPic,$imgFilenameMainPic) = $self->extraGroupMainPic($group);
+	my ($htmlFilenameDetail,$imgFilenameDetail) = $self->extraGroupDetailPic($group);
 }
 
 sub extra {
@@ -136,9 +178,8 @@ sub extra {
 
 	$items = $self->transform($items);
 
-	my $groups = $self->loadGroups();
-	for my $group (@{$groups}){
-		$self->extraGroup($group,$items);
+	for my $group (sort keys %{$items}){
+		$self->extraGroup($items->{$group});
 	}
 }
 
@@ -146,7 +187,7 @@ sub transform{
 	my $self = shift;
 	my $items = shift;
 
-	my $jo = {};
+	my $itemsTree = {};
 	my $colorItemCount = {};
 	for my $item ( @{$items}){
 		# my $title = $item->{title_cn} or next;
@@ -159,15 +200,23 @@ sub transform{
 
 		$colorItemCount->{$color} += 1;
 
-		push @{$jo->{$color}->{$w}}, $item;
+		push @{$itemsTree->{$color}->{$w}}, $item;
 	}
 
 	#remove those less then 4 size option
 	for my $color (keys %{$colorItemCount}){
-		delete $jo->{$color} if $colorItemCount->{$color} < 4;
+		delete $itemsTree->{$color} if $colorItemCount->{$color} < 4;
 	}
 
-	return $jo;
+
+	my $groups = Util::readFileJson("groups/$self->{code}.json");
+	for my $group (sort keys %{$groups}){
+		for my $color (sort keys %{$groups->{$group}->{colors}}){
+			$groups->{$group}->{$color} = $itemsTree->{$color};
+		}
+	}
+
+	return $groups;
 }
 
 1;

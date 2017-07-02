@@ -36,7 +36,8 @@
   "t_local_cid" : "-1",
   "t_location_state" : "美国",
   "t_add_qualification" : "1",
-  "t_approve_status" : "1",
+  "t_approve_status" : "2",
   "t_description" : "<p><img src=\"\"https://img.alicdn.com/imgextra/i1/59667328/TB24UXStY8kpuFjy0FcXXaUhpXa_!!59667328.jpg\"\"></p><p><img src=\"\"https://img.alicdn.com/imgextra/i1/59667328/TB20VZYtNXkpuFjy0FiXXbUfFXa_!!59667328.jpg\"\"></p>",
-  "t_freight_payer" : "2"
+  "t_freight_payer" : "2",
+  "t_num": 1
 }
