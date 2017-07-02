@@ -8,7 +8,8 @@ use JSON::Parse 'parse_json';
 use Error qw(:try);
 
 use Digest::MD5 qw(md5_hex);
-use Text::Template;
+use List::Util qw(reduce);
+
 use POSIX;
 use utf8;
 
@@ -17,7 +18,10 @@ use File::Path qw(make_path remove_tree);
 use Util;
 use MyDownloader;
 use DBStore;
+
 use Out::Single;
+use Out::Group;
+
 
 require "html_parser.pl";
 my $ROOT={
@@ -109,6 +113,12 @@ sub initBasic{
 
 	our $jo_root = transform2Flat($jo_asin);
 
+	my $defContent = Util::readFile("tbDefault.json") 
+	or die "taobao default value file not found";
+
+	my $defJson = parse_json($defContent) or die "failed to parse taobao default content";
+	$self->{store}->updateFieldAll($defJson);
+
 	my $n=0; 
 	for my $item ( @{$jo_root}){
 		print "init $item->{asin}, $item->{color}, $item->{size}\n";
@@ -135,7 +145,7 @@ sub updateAsinPrice {
 	my $item = shift;
 	
 	try{
-		$self->handle_size($item,100000);
+		$self->handle_size($item,1000000);
 	}catch Error with{
 		my $ex = shift;
 		print $ex->text . "\n";
@@ -152,11 +162,11 @@ sub extraData{
 	my $self = shift;
 
 	my $items = $self->{store}->getItemsAll();
-	my $out = Out::Single->new($self->{code});
+
+	my $out = Out::Group->new($self->{code});
 
 	$out->extra($items);
 }
-
 
 sub downloadImgs{
 	my $self = shift;
@@ -257,7 +267,7 @@ sub transform2Flat{
 		my $color = $jo_asin->{$asin}->[1];
 		my $size = $jo_asin->{$asin}->[0];
 
-		my ($w,$l) = $size =~ m/(\d+W) x (\d+L)/;
+		my ($w,$l) = $size =~ m/(\d+)W x (\d+)L/;
 		next unless defined $w and defined $l;
 
 		my $item = {};
@@ -273,8 +283,6 @@ sub transform2Flat{
 
 	return $jo;
 }
-
-
 
 1;
 

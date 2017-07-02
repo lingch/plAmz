@@ -1,0 +1,39 @@
+<div >
+<style>
+.mytable { 
+	background-color: white;
+  border: 0px;
+  text-align: center;
+  }
+.priceTable { 
+	background-color: white;
+  border: 2px solid black;
+  text-align: center;
+  }
+.priceTable td, .priceTable tr {
+  border: 1px dotted black;
+  	font: arial;
+	font-size: 12px;
+}
+.myDetail{
+	width: 100%;
+}
+.imgCell{
+	width: 50%;
+	/*height: 20%;*/
+}
+.img{
+	display: block;
+	width: 100%;
+	height: auto;
+}
+</style>
+<table class="mytable">
+<tbody>
+{=
+	$OUT.=$detailRows;
+=}
+</tbody>
+</table>
+</div>
+

@@ -1,0 +1,48 @@
+<div >
+<style>
+.mytable { 
+	background-color: white;
+  border: 0px;
+  text-align: center;
+  }
+.mytop{
+	width: 100%;
+}
+.imgCell{
+	width: {= ceil(100/scalar(@{$mainPicItems})) =}%;
+	/*height: 20%;*/
+}
+.img{
+	display: block;
+	width: 100%;
+	height: auto;
+}
+.nameCell{
+	width: {= ceil(100/scalar(@{$mainPicItems})) =}%;
+	font: arial;
+	font-size: xx-large;
+}
+</style>
+<table class="mytable">
+<tbody>
+<tr class="mytop">
+<td colspan="{=scalar(@{$mainPicItems})=}"><img src="{=$topImg=}" alt="" /></td>
+</tr>
+<tr>
+{=
+for my $item(@{$mainPicItems}){
+	$OUT.="<td class=\"imgCell\"><img class=\"img\" src=\"$item\" /></td>";
+}
+=}
+</tr>
+<tr>
+{=
+for my $item(@{$mainPicItems}){
+	$OUT.="<td class=\"nameCell\">$item->{color}</td>";
+}
+=}
+</tr>
+</tbody>
+</table>
+</div>
+
