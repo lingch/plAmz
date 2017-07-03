@@ -184,6 +184,20 @@ sub setDefaultValue {
 
 }
 
+sub stringifyGroup {
+	my $self = shift;
+	my $groupItem = shift;
+
+	my @tmp = ('') x scalar(@{$TBCsv::FIELD_LIST});
+	$self->{out} = \@tmp;
+
+	for my $key (keys %{$groupItem}){
+		$self->setByName($groupItem,$groupItem->{$key});
+	}
+
+	return join("\t", @{$self->{out}});
+}
+
 #TODO: check the price
 sub stringify {
 	my $self = shift;

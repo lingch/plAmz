@@ -148,125 +148,91 @@ sub extraGroupDetailPic {
 	my ($htmlFilename,$imgFilename) = $self->engineOutput($self->{engineDetail},"detail",$colorStr);
 }
 
-sub findLowestPrice {
+sub findLowestPriceItems {
 	my $groupitem = shift;
 
 	my $ret = {};
+	my $count = 0;
 	for my $color (sort keys %{$groupitem}){
-		$ret->{$color} = [];
+		my $lowPrice = 99999.0;
 		for my $w (%{$colorItem}){
 			my $ls = $colorItem->{$w};
 			my $tmp = reduce {$a->{t_price} lt $b->{t_price} ? $a : $b } @{$ls};
-			if($tmp->{t_price} < $lowPriceItem->{t_price}){
-				$lowPriceItems = [];
+			if($tmp->{t_price} < $lowPrice){
+				$lowPrice = $tmp->{t_price};
+				$ret = {};
 			}
-			push @{$lowPriceItem}, $tmp if ;
+
+			if($tmp->{t_price} == $lowPrice){
+				$ret->{$color} = [] unless defined $ret->{$color};
+				push @{$ret->{$color}}, $tmp;
+				$count++;
+				return $ret if $count >=24;
+			}
 		}
-
-
 	}
 
-	
-	return $lowPriceItem->{t_price};
+	return $ret;
 }
 
 sub extraGroupCsv {
 	my $self = shift;
-	my $groupItem = shift;
-	my $itemsKey = shift;
-
-	# my @tmp = ('') x scalar(@{$TBCsv::FIELD_LIST});
-	# $self->{out} = \@tmp;
-	# 	for my $key (keys %{$item_0}){
-	# 	$self->setByName($key,$item_0->{$key});
-	# }
 
 	my $tmp = Util::readFileJson("tbDefault.json") ;
-	# my $item0 = (values %{$groupItem->{$color}})[0]->[0];
-	# for my $field (sort keys %{$item0}){
-	# 	$item0->{$field} = $defJson->{$field} unless defined $item0->{$field};
-	# }
 
 	$tmp->{t_title} = "李维斯Levis男505牛仔裤";
-	# my $title_cn = $self->{trans}->translate($item_0->{title});
-	# $self->setByName('t_title',"$title_cn $item_0->{color_cn} $itemsKey");
+
+	my $lowPriceItems = findLowestPriceItems();
+
+	my $cg = TBCsv::PropGenerator->new('color');
+	my $sg = TBCsv::PropGenerator->new('size');
+	my $colorMap = {}, $sizeMap={};
+	$tmp->{t_num} = 0;
+	$tmp->{t_skuProps} = "";
+	for my $color (sort keys %{$lowPriceItems}){
+		$colorMap->{$color} = $cg->generate() unless defined $colorMap->{$color};
+		for my $sizeItem (@{$lowPriceItems->{$color}}){
+			$sizeMap->{$sizeItem->{size}} = $sg->generate() unless defined $sizeMap->{$sizeItem->{size}};
+			
+			$tmp->{t_skuProps} .= "$item->{t_price}:1:$item->{asin}:$addCpv->{$color};$addCpv->{$size};";
+
+			$tmp->{t_num}++;
+		}
+	}
 
 	#t_input_custom_cpv
-	# my $cg = TBCsv::PropGenerator->new('color');
-	# my $sg = TBCsv::PropGenerator->new('size');
-	my $colors = [];
-	my $sizes = [];
-	for my $color (sort keys %{$groupItem}){
+	my $codeOnly = join(';',sort values %{$colorMap}) . ";" . join(';',sort values %{$sizeMap});
+	my $valueOnly = join(';',sort keys %{$colorMap}) . ";" . join(';',sort keys %{$sizeMap});
+	my $codeValue = join(';', @{$colorMap}) . ";" . join(';', @{$sizeMap});
 
-	}
-
-	my $addCpv = {};
-	my $t_num = 0;
-	my $skuProps = "";
-	for my $item (@{$items}){
-		my $color = $self->{trans}->translate($item_0->{color});
-		my $size = $item->{size};
-		$addCpv->{$color} = $cg->generate() unless defined $addCpv->{$color};
-		$addCpv->{$size} = $sg->generate() unless defined $addCpv->{$size};
-		$skuProps .= "$item->{t_price}:1:$item->{asin}:$addCpv->{$color};$addCpv->{$size};";
-
-		$t_num++;
-	}
-
-	$self->setByName('t_approve_status',2);
-
-	#t_skuProps
-	$self->setByName('t_skuProps',$skuProps);
-
-	#t_input_custom_cpv
-	my $codeOnly = "";
-	my $valueOnly = "";
-	my $codeValue = "";
-	for my $key (keys %{$addCpv}){
-		$codeOnly .= "$addCpv->{$key};";
-		$valueOnly .= "$key;";
-		$codeValue .= "$addCpv->{$key}:$key;";
-	}
-
-	$self->setByName('t_inputPids',$codeOnly);
-	$self->setByName('t_inputValues',$codeValue);
-
-	$self->setByName('t_input_custom_cpv',$codeValue);
-	$self->setByName('t_num',$t_num);
+	$tmp->{t_inputPids}=$codeOnly;
+	$tmp->{t_inputValues}=$valueOnly;
+	$tmp->{t_input_custom_cpv}=$codeValue;
+	
 	#t_cateProps
-	$self->setByName('t_cateProps',reform_array($item_0->{t_cateProps}),0);
-	$self->setByName('t_cateProps',$codeOnly,1);
+	# $self->setByName('t_cateProps',reform_array($item_0->{t_cateProps}),0);
+	# $self->setByName('t_cateProps',$codeOnly,1);
 
 	#t_picture
 	# $self->setByName('t_picture',reform_array($item_0->{t_picture}),0);
-	
 
-	return join("\t", @{$self->{out}});
+	my $csv = TBCsv->new();
+
+	return $lines = $csv->stringifyGroup($tmp);
 }
 
-sub extraGroup {
-	my $self = shift;
-	my $group = shift;
-	# my $items = shift;
-#t_picture
-#t_skuProps
-#t_inputPids
-#t_inputValues
-	# my $gCsv = TBCsv->new();
-	# $gCsv->setNum(1);
-
-	my ($htmlFilenameMainPic,$imgFilenameMainPic) = $self->extraGroupMainPic($group);
-	my ($htmlFilenameDetail,$imgFilenameDetail) = $self->extraGroupDetailPic($group);
-}
-
+#itemTree is in the form of groups-group-color-w-l
 sub extra {
 	my $self = shift;
 	my $items = shift;
 
-	$items = $self->transform($items);
+	my $itemTree = $self->transform($items);
 
-	for my $group (sort keys %{$items}){
-		$self->extraGroup($items->{$group});
+	for my $group (sort keys %{$itemTree}){
+		my ($htmlFilenameMainPic,$imgFilenameMainPic) = $self->extraGroupMainPic($itemTree->{$group});
+		my ($htmlFilenameDetail,$imgFilenameDetail) = $self->extraGroupDetailPic($itemTree->{$group});
+		my $lines = $self->extraGroupCsv($itemTree->{$group});
+		Util::writeFileUtf8($lines,"$group.csv");
 	}
 }
 
