@@ -11,6 +11,8 @@ use Template;
 use Util;
 use TBCsv;
 
+use strict;
+
 our $topImg = File::Spec->rel2abs("template/top1.jpg");
 
 sub new {
@@ -149,18 +151,19 @@ sub extraGroupDetailPic {
 }
 
 sub findLowestPriceItems {
-	my $groupitem = shift;
+	my $groupItem = shift;
 
 	my $ret = {};
 	my $count = 0;
-	for my $color (sort keys %{$groupitem}){
-		my $lowPrice = 99999.0;
-		for my $w (%{$colorItem}){
-			my $ls = $colorItem->{$w};
+	my $lowPrice = 99999.0;
+	for my $color (sort keys %{$groupItem}){
+		for my $w (sort keys %{$groupItem->{$color}}){
+			my $ls = $groupItem->{$color}->{$w};
 			my $tmp = reduce {$a->{t_price} lt $b->{t_price} ? $a : $b } @{$ls};
 			if($tmp->{t_price} < $lowPrice){
 				$lowPrice = $tmp->{t_price};
 				$ret = {};
+				$count = 0;
 			}
 
 			if($tmp->{t_price} == $lowPrice){
@@ -177,16 +180,18 @@ sub findLowestPriceItems {
 
 sub extraGroupCsv {
 	my $self = shift;
+	my $groupItem = shift;
 
 	my $tmp = Util::readFileJson("tbDefault.json") ;
 
 	$tmp->{t_title} = "李维斯Levis男505牛仔裤";
 
-	my $lowPriceItems = findLowestPriceItems();
+	my $lowPriceItems = findLowestPriceItems($groupItem);
 
 	my $cg = TBCsv::PropGenerator->new('color');
 	my $sg = TBCsv::PropGenerator->new('size');
-	my $colorMap = {}, $sizeMap={};
+	my $colorMap = {};
+	my $sizeMap={};
 	$tmp->{t_num} = 0;
 	$tmp->{t_skuProps} = "";
 	for my $color (sort keys %{$lowPriceItems}){
@@ -194,7 +199,7 @@ sub extraGroupCsv {
 		for my $sizeItem (@{$lowPriceItems->{$color}}){
 			$sizeMap->{$sizeItem->{size}} = $sg->generate() unless defined $sizeMap->{$sizeItem->{size}};
 			
-			$tmp->{t_skuProps} .= "$item->{t_price}:1:$item->{asin}:$addCpv->{$color};$addCpv->{$size};";
+			$tmp->{t_skuProps} .= "$sizeItem->{t_price}:1:$sizeItem->{asin}:$colorMap->{$sizeItem->{color}};$sizeMap->{$sizeItem->{size}};";
 
 			$tmp->{t_num}++;
 		}
@@ -203,7 +208,7 @@ sub extraGroupCsv {
 	#t_input_custom_cpv
 	my $codeOnly = join(';',sort values %{$colorMap}) . ";" . join(';',sort values %{$sizeMap});
 	my $valueOnly = join(';',sort keys %{$colorMap}) . ";" . join(';',sort keys %{$sizeMap});
-	my $codeValue = join(';', @{$colorMap}) . ";" . join(';', @{$sizeMap});
+	my $codeValue = join(';', %{$colorMap}) . ";" . join(';', %{$sizeMap});
 
 	$tmp->{t_inputPids}=$codeOnly;
 	$tmp->{t_inputValues}=$valueOnly;
@@ -218,7 +223,7 @@ sub extraGroupCsv {
 
 	my $csv = TBCsv->new();
 
-	return $lines = $csv->stringifyGroup($tmp);
+	return $csv->stringifyGroup($tmp);
 }
 
 #itemTree is in the form of groups-group-color-w-l
@@ -262,14 +267,15 @@ sub transform{
 	}
 
 
-	my $groups = Util::readFileJson("groups/$self->{code}.json");
-	for my $group (sort keys %{$groups}){
-		for my $color (sort keys %{$groups->{$group}->{colors}}){
-			$groups->{$group}->{$color} = $itemsTree->{$color};
+	my $groupsItem = Util::readFileJson("groups/$self->{code}.json");
+	for my $group (sort keys %{$groupsItem}){
+		for my $color (sort keys %{$groupsItem->{$group}->{colors}}){
+			$groupsItem->{$group}->{$color} = $itemsTree->{$color};
 		}
+		delete $groupsItem->{$group}->{colors};
 	}
 
-	return $groups;
+	return $groupsItem;
 }
 
 1;
